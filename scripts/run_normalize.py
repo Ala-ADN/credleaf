@@ -1,10 +1,8 @@
 """Fetch + extract main text for every capture in a harvest JSONL.
 
 Usage:
-    uv run python scripts/run_normalize.py <collection_id> <phase_name> [--max-docs N] [--no-cache]
+    uv run python scripts/run_normalize.py <collection_id> <[phase_name|all]> [--max-docs N] [--no-cache]
 
-(Named `run_normalize` rather than `normalize` so the script doesn't shadow
-the top-level `normalize` package on sys.path.)
 """
 from __future__ import annotations
 
@@ -21,7 +19,7 @@ from normalize import normalize_phase
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
-    p.add_argument("phase_name", choices=list(PHASES_BY_NAME))
+    p.add_argument("phase_name", choices=list(PHASES_BY_NAME) + ["all"])
     p.add_argument("--max-docs", type=int, default=None)
     p.add_argument("--no-cache", action="store_true")
     p.add_argument("--timeout", type=float, default=60.0)
@@ -34,7 +32,13 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-
+    if args.phase_name == "all":
+        for p in PHASES_BY_NAME:
+            print(f"\n=== Normalizing phase {p} ===")
+            sys.argv[2] = p
+            if main() != 0:
+                return 1
+    
     captures_jsonl = (
         RAW_DIR / "captures" / str(args.collection_id) / f"{args.phase_name}.jsonl"
     )
@@ -46,7 +50,6 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
-
     with ArchiveItClient(timeout=args.timeout) as client:
         path, stats = normalize_phase(
             client,

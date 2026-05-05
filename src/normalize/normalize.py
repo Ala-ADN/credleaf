@@ -129,7 +129,8 @@ def normalize_phase(
     """Read a harvest JSONL, fetch+extract each capture, write normalized JSONL."""
     records = list(load_jsonl(captures_jsonl))
     if not records:
-        raise ValueError(f"no records in {captures_jsonl}")
+        log.warning(ValueError(f"no records in {captures_jsonl}"))
+        return output_path or Path(), NormalizeStats()
 
     if output_path is None:
         cid = records[0].collection_id
