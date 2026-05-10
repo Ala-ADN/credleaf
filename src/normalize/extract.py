@@ -14,7 +14,9 @@ from pathlib import Path
 
 import trafilatura
 from pydantic import BaseModel
+from fast_langdetect import detect
 from trafilatura import load_html, metadata as trafilatura_metadata
+
 
 MIN_TEXT_LEN = 100
 
@@ -49,6 +51,12 @@ def save_cached_html(path: Path, content: bytes) -> None:
     with gzip.open(path, "wb") as f:
         f.write(content)
 
+def detect_language(text: str) -> str | None:
+    if text == "":
+        return None
+    return str(detect(text[:80], model="auto", k=1)[0]["lang"])
+
+
 
 def extract(html: bytes | str, url: str | None = None) -> Extracted | None:
     """Extract text + metadata. Falls back to plain-text dump for non-article pages.
@@ -72,7 +80,7 @@ def extract(html: bytes | str, url: str | None = None) -> Extracted | None:
             return Extracted(
                 title=data.get("title"),
                 text=text,
-                language=data.get("language"),
+                language=detect_language(text),
                 publish_date=data.get("date"),
                 extraction_mode="article",
             )
@@ -93,7 +101,7 @@ def extract(html: bytes | str, url: str | None = None) -> Extracted | None:
     return Extracted(
         title=title,
         text=plain.strip(),
-        language=None,
+        language=detect_language(plain),
         publish_date=None,
         extraction_mode="fallback_html2txt",
     )

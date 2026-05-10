@@ -25,6 +25,7 @@ COVID_COLLECTIONS: dict[int, ArchiveItCollection] = {
         credibility_tier="low",
     ),
     4887: ArchiveItCollection(
+        #CONTAINS NON COVID CONTENT
         id=4887,
         name="Global Health Events",
         credibility_tier="mixed",
