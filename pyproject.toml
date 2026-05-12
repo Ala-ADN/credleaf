@@ -9,11 +9,25 @@ dependencies = [
     "internetarchive>=5.8.0",
     "pydantic>=2.13.3",
     "trafilatura>=2.0.0",
+    "chonkie>=0.1.0",
+    "torch>=2.0.0",
+    "fast-langdetect>=1.0.1",
+    "spacy>=3.7.0",
+    "scipy>=1.11.0",
+    "cartopy>=0.22.0",
+    "shapely>=2.0.0",
+    "numpy>=1.26.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "jupyter>=1.0.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "ffmpeg-python",
+    "ipywidgets>=8.0",
 ]
 
 [build-system]
