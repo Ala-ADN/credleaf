@@ -15,7 +15,8 @@ The animated KDE map above traces where the toponyms for each tier concentrated 
 - **P4_delta wave** (Jun – Nov 2021)
 - **P5_omicron wave** (Dec 2021 – Jun 2022)
 - **P6_transition end** (Jul 2022 – May 2023)
-  The major milestones defining the phases are detailed with sources in [src/config.py](src/config.py)
+
+The major milestones defining the phases are detailed with sources in [src/config.py](src/config.py)
 
 > Does low-credibility content disperse, geographically and semantically, in ways that authoritative reporting does not?
 
