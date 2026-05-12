@@ -59,6 +59,7 @@ Five stages, each writing its own JSONL so steps are independently re-runnable:
 ## The georeferencing demo
 
 Detects toponyms with spaCy's transformer NER `en_core_web_trf`, resolves them against a GeoNames `cities1000` gazetteer with **country-context boosting** + **population tie-break** disambiguation
+
 Walkthrough lives in [notebooks/02_georeferencing_eda.ipynb](notebooks/02_georeferencing_eda.ipynb):
 
 - coverage diagnostics
@@ -76,7 +77,7 @@ uv sync
 uv run python -m spacy download en_core_web_trf
 uv run python -m georeferencing.setup_gazetteer
 
-# 2. Harvest + normalize (one collection at a time; phase = all for the full sweep)
+# 2. Harvest + normalize (one collection at a time; phase = all)
 uv run python scripts/harvest.py 13559 all
 uv run python scripts/run_normalize.py 13559 all
 uv run python scripts/build_credibility.py
