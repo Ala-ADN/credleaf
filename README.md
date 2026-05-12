@@ -32,17 +32,17 @@ Three Archive-It collections, chosen to give the hypothesis a comparative pair p
 ## Pipeline
 
 ```
-Archive-It CDX  ─►  harvest   ─►  raw captures
-                                      │
-                                      ▼
-                                  normalize +
-                                 trafilatura +
-                                fast-langdetect
-                                      │
-                        ┌─────────────┼─────────────┐
-                        ▼             ▼             ▼
-                   embedings   georeferencing   EDA notebooks
-                   (Qdrant)  (spaCy + GeoNames)
+            Archive-It CDX  ─►  harvest   ─►  raw captures
+                                                  │
+                                                  ▼
+                                              normalize +
+                                             trafilatura +
+                                            fast-langdetect
+                                                  │
+                                    ┌─────────────┼─────────────┐
+                                    ▼             ▼             ▼
+                               embedings   georeferencing   EDA notebooks
+                               (Qdrant)  (spaCy + GeoNames)
 ```
 
 Five stages, each writing its own JSONL so steps are independently re-runnable:
