@@ -39,8 +39,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--model",
         type=str,
-        default="sentence-transformers/all-mpnet-base-v2",
-        help="Embedding model (default: all-mpnet-base-v2)",
+        default="BAAI/bge-m3",
+        help="Embedding model (default: BAAI/bge-m3)",
     )
     return p.parse_args()
 
@@ -64,7 +64,7 @@ def main() -> int:
     # Check Qdrant connection
     try:
         import httpx
-        resp = httpx.get(f"{args.qdrant_url}/health", timeout=5.0)
+        resp = httpx.get(f"{args.qdrant_url}/healthz", timeout=5.0)
         if resp.status_code != 200:
             print(f"Qdrant not responding: {resp.status_code}", file=sys.stderr)
             print(f"Start Qdrant with: docker run -p 6333:6333 qdrant/qdrant", file=sys.stderr)
