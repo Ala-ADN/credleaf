@@ -56,7 +56,7 @@ PANDEMIC_PHASES: list[Phase] = [
     # https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic
 
     # 2019-12-31 China reports cluster of pneumonia in Wuhan to WHO.
-    Phase("P0_outbreak", "2019-12-01", "2020-01-30"),
+    #Phase("P0_outbreak", "2019-12-01", "2020-01-30"),
     # 2020-01-30 WHO declares PHEIC.
     Phase("P1_global_onset", "2020-01-31", "2020-11-30"),
     # 2020-03-11 WHO characterizes COVID-19 as a pandemic.
