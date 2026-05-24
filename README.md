@@ -131,6 +131,11 @@ data/                            JSONL artifacts
 - [ ] Multilingual NER pass (current pipeline is English-only).
 - [ ] Augment the authoritative credibility registry with more non-English sources
 
+### Data pipeline
+
+- [ ] Migrate form JSONL to SQLite? for better queryability
+- [ ] Migrate from scripts to a proper DAG runner
+
 ## Status
 
 Active prototype. Spun off as a demonstrator for the HEIG-VD internship _"Georeferencing of Texts Through Machine Learning"_ (Prof. J. Ingensand).
