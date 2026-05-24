@@ -17,6 +17,7 @@ dependencies = [
     "cartopy>=0.22.0",
     "shapely>=2.0.0",
     "numpy>=1.26.0",
+    "datasketch>=1.10.0",
 ]
 
 [dependency-groups]
