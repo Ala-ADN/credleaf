@@ -3,7 +3,7 @@
 Requires a running Qdrant instance (local or remote).
 
 Usage:
-    uv run python scripts/embed.py <collection_id> <[phase_name|all]> [--qdrant-url URL] [--model MODEL]
+    uv run python scripts/embed.py <collection_id> <[phase_name|all]> [--qdrant-url URL] [--model MODEL] [--batch-size N]
 
 Qdrant Setup (quick start):
     docker run -p 6333:6333 qdrant/qdrant
@@ -12,6 +12,7 @@ Examples:
     uv run python scripts/embed.py 13559 P0_outbreak
     uv run python scripts/embed.py 4887 all --qdrant-url http://localhost:6333
     uv run python scripts/embed.py 13559 all --model bge-m3
+    uv run python scripts/embed.py 13559 all --batch-size 512
 """
 from __future__ import annotations
 
@@ -41,6 +42,12 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="BAAI/bge-m3",
         help="Embedding model (default: BAAI/bge-m3)",
+    )
+    p.add_argument(
+        "--batch-size",
+        type=int,
+        default=256,
+        help="Number of chunks to buffer before writing to Qdrant (default: 256)",
     )
     return p.parse_args()
 
@@ -96,6 +103,7 @@ def main() -> int:
         qdrant_url=args.qdrant_url,
         collection_name=collection_name,
         embedding_model=args.model,
+        batch_size=args.batch_size,
         show_progress=True,
     )
 

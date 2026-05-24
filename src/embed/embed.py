@@ -20,12 +20,15 @@ from chonkie import QdrantHandshake, SemanticChunker
 
 log = logging.getLogger(__name__)
 
+MAX_QDRANT_PAYLOAD_BYTES = 30 * 1024 * 1024
+
 
 def embed_to_qdrant(
     normalized_path: Path,
     qdrant_url: str,
     collection_name: str,
     embedding_model: str = "sentence-transformers/all-mpnet-base-v2",
+    batch_size: int = 256,
     show_progress: bool = True,
 ) -> int:
     """Load normalized documents, chunk semantically, and write to Qdrant.
@@ -35,6 +38,7 @@ def embed_to_qdrant(
         qdrant_url: Qdrant server URL (e.g., "http://localhost:6333").
         collection_name: Qdrant collection name (created if doesn't exist).
         embedding_model: Sentence-transformer model for embeddings.
+        batch_size: Number of chunks to buffer before writing to Qdrant.
         show_progress: Whether to show progress during processing.
 
     Returns:
@@ -60,6 +64,16 @@ def embed_to_qdrant(
     # Load and process normalized documents
     doc_count = 0
     chunk_count = 0
+    batch_chunks = []
+    batch_bytes = 0
+
+    def flush_batch() -> None:
+        if not batch_chunks:
+            return
+        handshake.write(batch_chunks)
+        batch_chunks.clear()
+        nonlocal batch_bytes
+        batch_bytes = 0
 
     log.info("Processing normalized documents from %s", normalized_path)
     with normalized_path.open("r", encoding="utf-8") as fh:
@@ -110,12 +124,27 @@ def embed_to_qdrant(
                 # (chonkie's Chunk objects support metadata)
                 chunk.metadata = metadata
 
-            # Write chunks to Qdrant (handshake batches automatically)
-            handshake.write(chunks)
+            # Buffer chunks and flush when we hit size or payload thresholds
+            for chunk in chunks:
+                chunk_text = getattr(chunk, "text", "")
+                chunk_bytes = len(chunk_text.encode("utf-8"))
+                if chunk_bytes >= MAX_QDRANT_PAYLOAD_BYTES:
+                    log.warning(
+                        "Skipping oversized chunk for doc %d (%d bytes)",
+                        doc_count,
+                        chunk_bytes,
+                    )
+                    continue
+                batch_bytes += chunk_bytes
+                batch_chunks.append(chunk)
+                if len(batch_chunks) >= batch_size or batch_bytes >= MAX_QDRANT_PAYLOAD_BYTES:
+                    flush_batch()
             chunk_count += len(chunks)
 
             if show_progress and doc_count % 100 == 0:
                 log.info("Processed %d documents, wrote %d chunks", doc_count, chunk_count)
+
+    flush_batch()
 
     log.info(
         "Processing complete: %d documents, %d chunks written to Qdrant",
