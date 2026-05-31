@@ -81,14 +81,14 @@ def main() -> int:
         print(f"Start Qdrant with: docker run -p 6333:6333 qdrant/qdrant", file=sys.stderr)
         return 3
 
-    # Load normalized JSONL
-    normalized_path = (
-        PROCESSED_DIR / "normalized" / str(args.collection_id) / f"{args.phase_name}.jsonl"
+    # Load deduped JSONL
+    deduped_path = (
+        PROCESSED_DIR / "deduped" / str(args.collection_id) / f"{args.phase_name}.jsonl"
     )
-    if not normalized_path.exists():
+    if not deduped_path.exists():
         print(
-            f"missing normalized file: {normalized_path}\n"
-            f"run `uv run python scripts/run_normalize.py {args.collection_id} "
+            f"missing deduped file: {deduped_path}\n"
+            f"run `uv run python scripts/_dedupe.py {args.collection_id} "
             f"{args.phase_name}` first.",
             file=sys.stderr,
         )
@@ -99,7 +99,7 @@ def main() -> int:
 
     # Embed and write to Qdrant
     chunk_count = embed_to_qdrant(
-        normalized_path,
+        deduped_path,
         qdrant_url=args.qdrant_url,
         collection_name=collection_name,
         embedding_model=args.model,

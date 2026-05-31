@@ -59,13 +59,13 @@ def main() -> int:
 def _run_one_phase(args: argparse.Namespace, *, shared_extractor: ToponymExtractor | None = None,
                    shared_gazetteer: Gazetteer | None = None,
                    shared_registry: CredibilityRegistry | None = None) -> int:
-    normalized_path = (
-        PROCESSED_DIR / "normalized" / str(args.collection_id) / f"{args.phase_name}.jsonl"
+    deduped_path = (
+        PROCESSED_DIR / "deduped" / str(args.collection_id) / f"{args.phase_name}.jsonl"
     )
-    if not normalized_path.exists():
+    if not deduped_path.exists():
         print(
-            f"missing normalized file: {normalized_path}\n"
-            f"run `uv run python scripts/run_normalize.py {args.collection_id} "
+            f"missing deduped file: {deduped_path}\n"
+            f"run `uv run python scripts/_dedupe.py {args.collection_id} "
             f"{args.phase_name}` first.",
             file=sys.stderr,
         )
@@ -94,7 +94,7 @@ def _run_one_phase(args: argparse.Namespace, *, shared_extractor: ToponymExtract
     extractor = shared_extractor or ToponymExtractor(model_name=args.model, device=args.device)
 
     path, stats = georef_phase(
-        normalized_path,
+        deduped_path,
         extractor=extractor,
         gazetteer=gazetteer,
         registry=registry,
