@@ -94,8 +94,8 @@ def main() -> int:
         )
         return 2
 
-    # Qdrant collection name: "{collection_id}_{phase_name}"
-    collection_name = f"collection_{args.collection_id}_{args.phase_name}"
+    # Qdrant collection name: one collection for hnsw index optimization, not per phase"
+    collection_name = f"credleaf"
 
     # Embed and write to Qdrant
     chunk_count = embed_to_qdrant(
