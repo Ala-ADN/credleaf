@@ -3,16 +3,16 @@
 Requires a running Qdrant instance (local or remote).
 
 Usage:
-    uv run python scripts/embed.py <collection_id> <[phase_name|all]> [--qdrant-url URL] [--model MODEL] [--batch-size N]
+    uv run python scripts/run_embed.py <collection_id> <[phase_name|all]> [--qdrant-url URL] [--model MODEL] [--batch-size N]
 
 Qdrant Setup (quick start):
     docker run -p 6333:6333 qdrant/qdrant
 
 Examples:
-    uv run python scripts/embed.py 13559 P0_outbreak
-    uv run python scripts/embed.py 4887 all --qdrant-url http://localhost:6333
-    uv run python scripts/embed.py 13559 all --model bge-m3
-    uv run python scripts/embed.py 13559 all --batch-size 512
+    uv run python scripts/run_embed.py 13559 P0_outbreak
+    uv run python scripts/run_embed.py 4887 all --qdrant-url http://localhost:6333
+    uv run python scripts/run_embed.py 13559 all --model bge-m3
+    uv run python scripts/run_embed.py 13559 all --batch-size 512
 """
 from __future__ import annotations
 
