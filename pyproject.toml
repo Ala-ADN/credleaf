@@ -18,6 +18,8 @@ dependencies = [
     "shapely>=2.0.0",
     "numpy>=1.26.0",
     "datasketch>=1.10.0",
+    "plotly>=6.8.0",
+    "umap-learn>=0.5.12",
 ]
 
 [dependency-groups]
