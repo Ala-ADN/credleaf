@@ -118,6 +118,7 @@ def embed_to_qdrant(
                     "extraction_mode": doc.get("extraction_mode"),
                     "word_count": doc.get("word_count", 0),
                     "char_count": doc.get("char_count", 0),
+                    "publish_date": doc.get("publish_date"),
                 }
 
                 # Update chunk metadata in-place
