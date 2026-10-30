@@ -21,6 +21,9 @@ class NormalizedDoc(Extracted):
     seed_id: int
     seed_url: str
     phase: str
+    capture_phase: str | None = None
+    event_date: str | None = None
+    event_date_source: Literal["publish_date", "capture_timestamp"] | None = None
     capture_timestamp: str
     capture_url: str
     digest: str | None = None

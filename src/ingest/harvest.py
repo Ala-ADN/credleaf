@@ -4,13 +4,15 @@ Output: one JSONL file per (collection, phase) at
     {RAW_DIR}/captures/{collection_id}/{phase_name}.jsonl
 
 Each line is a serialized `CaptureRecord` (capture + seed + collection context).
-Revisits and duplicate-digest captures are dropped so each line is one unique
-archived document. Non-2xx and non-HTML rows are filtered.
+Revisits and duplicate page/digest captures are dropped. By default each
+canonical URL contributes at most one capture per capture phase; distinct
+sources and later phases remain eligible. Non-2xx/non-HTML rows are filtered.
 """
 from __future__ import annotations
 
 import json
 import logging
+from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +20,7 @@ from pathlib import Path
 import httpx
 
 from config import RAW_DIR, Phase
+from url_utils import canonical_url
 
 from .archive_it import ArchiveItClient
 from .models import Capture, CaptureRecord, Seed
@@ -36,6 +39,7 @@ class HarvestStats:
     captures_skipped_status: int = 0
     captures_skipped_mimetype: int = 0
     captures_skipped_dup_digest: int = 0
+    captures_skipped_dup_url: int = 0
     seed_errors: list[tuple[int, str]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, object]:
@@ -47,6 +51,7 @@ class HarvestStats:
             "captures_skipped_status": self.captures_skipped_status,
             "captures_skipped_mimetype": self.captures_skipped_mimetype,
             "captures_skipped_dup_digest": self.captures_skipped_dup_digest,
+            "captures_skipped_dup_url": self.captures_skipped_dup_url,
             "seed_error_count": len(self.seed_errors),
         }
 
@@ -59,6 +64,38 @@ def _is_html(mimetype: str | None) -> bool:
 
 def _is_ok_status(status: str | None) -> bool:
     return bool(status) and status[0] == "2"
+
+
+def _keep_capture(cap, seen_digests, url_counts, max_captures_per_url, stats):
+    """Count each canonical page toward the budget only after validity checks."""
+    stats.captures_seen += 1
+    if not _is_ok_status(cap.status):
+        stats.captures_skipped_status += 1
+        return False
+    if not _is_html(cap.mimetype):
+        stats.captures_skipped_mimetype += 1
+        return False
+    page = canonical_url(cap.url) or cap.url
+    key = (page, cap.digest)
+    if cap.digest and key in seen_digests:
+        stats.captures_skipped_dup_digest += 1
+        return False
+    if max_captures_per_url and url_counts[page] >= max_captures_per_url:
+        stats.captures_skipped_dup_url += 1
+        return False
+    if cap.digest:
+        seen_digests.add(key)
+    url_counts[page] += 1
+    return True
+
+
+def _validate_limits(max_seeds, max_captures_per_seed, max_captures_per_url):
+    if max_seeds is not None and max_seeds < 1:
+        raise ValueError("max_seeds must be positive")
+    if max_captures_per_seed is not None and max_captures_per_seed < 1:
+        raise ValueError("max_captures_per_seed must be positive")
+    if max_captures_per_url < 0:
+        raise ValueError("max_captures_per_url must be nonnegative; zero means unlimited")
 
 
 def _select_seeds(
@@ -82,31 +119,25 @@ def _harvest_seed(
     collection_id: int,
     seed: Seed,
     phase: Phase,
-    seen_digests: set[str],
+    seen_digests: set[tuple[str, str]],
     max_captures_per_seed: int | None,
     stats: HarvestStats,
     match_type: str = "exact",
+    url_counts: Counter | None = None,
+    max_captures_per_url: int = 1,
 ) -> Iterable[CaptureRecord]:
     from_ts, to_ts = phase.cdx_window()
     target = seed.canonical_url or seed.url
     yielded = 0
+    if url_counts is None:
+        url_counts = Counter()
     for cap in client.iter_captures(
         collection_id, target,
         match_type=match_type, from_ts=from_ts, to_ts=to_ts,
-        collapse="digest",
+        collapse=None,
     ):
-        stats.captures_seen += 1
-        if not _is_ok_status(cap.status):
-            stats.captures_skipped_status += 1
+        if not _keep_capture(cap, seen_digests, url_counts, max_captures_per_url, stats):
             continue
-        if not _is_html(cap.mimetype):
-            stats.captures_skipped_mimetype += 1
-            continue
-        if cap.digest and cap.digest in seen_digests:
-            stats.captures_skipped_dup_digest += 1
-            continue
-        if cap.digest:
-            seen_digests.add(cap.digest)
         yield CaptureRecord(
             collection_id=collection_id,
             seed_id=seed.id,
@@ -128,6 +159,7 @@ def harvest_phase(
     max_seeds: int | None = None,
     max_captures_per_seed: int | None = None,
     match_type: str = "exact",
+    max_captures_per_url: int = 1,
 ) -> tuple[Path, HarvestStats]:
     """Harvest one (collection, phase) into a JSONL file. Returns (path, stats).
 
@@ -135,13 +167,16 @@ def harvest_phase(
     homepages). Use 'host' or 'domain' to harvest articles under each seed's
     site — orders of magnitude more captures, and what you want for content
     analysis.
+    max_captures_per_url: default 1 per capture phase; 0 retains changed revisions.
     """
+    _validate_limits(max_seeds, max_captures_per_seed, max_captures_per_url)
     if output_path is None:
         output_path = RAW_DIR / "captures" / str(collection_id) / f"{phase.name}.jsonl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     stats = HarvestStats()
-    seen_digests: set[str] = set()
+    seen_digests: set[tuple[str, str]] = set()
+    url_counts = Counter()
 
     log.info(
         "harvest start: collection=%d phase=%s match=%s window=%s..%s -> %s",
@@ -157,6 +192,7 @@ def harvest_phase(
                     client, collection_id, seed, phase,
                     seen_digests, max_captures_per_seed, stats,
                     match_type=match_type,
+                    url_counts=url_counts, max_captures_per_url=max_captures_per_url,
                 ):
                     fh.write(record.model_dump_json() + "\n")
                     stats.captures_kept += 1
@@ -187,6 +223,7 @@ def harvest_all_phases(
     max_seeds: int | None = None,
     max_captures_per_seed: int | None = None,
     match_type: str = "exact",
+    max_captures_per_url: int = 1,
 ) -> tuple[dict[str, Path], dict[str, HarvestStats]]:
     """Walk seeds once and bucket captures into per-phase JSONL files.
 
@@ -196,6 +233,7 @@ def harvest_all_phases(
     """
     if not phases:
         raise ValueError("phases must be non-empty")
+    _validate_limits(max_seeds, max_captures_per_seed, max_captures_per_url)
 
     if output_dir is None:
         output_dir = RAW_DIR / "captures" / str(collection_id)
@@ -207,7 +245,8 @@ def harvest_all_phases(
 
     paths: dict[str, Path] = {p.name: output_dir / f"{p.name}.jsonl" for p in phases}
     stats_by_phase: dict[str, HarvestStats] = {p.name: HarvestStats() for p in phases}
-    seen_by_phase: dict[str, set[str]] = {p.name: set() for p in phases}
+    seen_by_phase: dict[str, set[tuple[str, str]]] = {p.name: set() for p in phases}
+    urls_by_phase = {p.name: Counter() for p in phases}
 
     log.info(
         "harvest start (multi-phase): collection=%d phases=%d match=%s window=%s..%s -> %s",
@@ -226,7 +265,7 @@ def harvest_all_phases(
                 for cap in client.iter_captures(
                     collection_id, target,
                     match_type=match_type, from_ts=union_from, to_ts=union_to,
-                    collapse="digest",
+                    collapse=None,
                 ):
                     phase = _phase_for_timestamp(cap.timestamp, windows)
                     if phase is None:
@@ -242,19 +281,9 @@ def harvest_all_phases(
                             break
                         continue
                     stats = stats_by_phase[phase.name]
-                    stats.captures_seen += 1
-                    if not _is_ok_status(cap.status):
-                        stats.captures_skipped_status += 1
-                        continue
-                    if not _is_html(cap.mimetype):
-                        stats.captures_skipped_mimetype += 1
-                        continue
                     seen = seen_by_phase[phase.name]
-                    if cap.digest and cap.digest in seen:
-                        stats.captures_skipped_dup_digest += 1
+                    if not _keep_capture(cap, seen, urls_by_phase[phase.name], max_captures_per_url, stats):
                         continue
-                    if cap.digest:
-                        seen.add(cap.digest)
                     record = CaptureRecord(
                         collection_id=collection_id,
                         seed_id=seed.id,

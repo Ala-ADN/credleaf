@@ -13,6 +13,7 @@ import pytest
 
 from config import PHASES_BY_NAME
 from ingest import ArchiveItClient, CaptureRecord, harvest_phase, load_jsonl
+from url_utils import canonical_url
 
 
 @pytest.fixture(scope="module")
@@ -54,5 +55,5 @@ def test_harvest_collection_13559_p1_global_onset(
         assert r.capture.mimetype and "html" in r.capture.mimetype
         assert "2020" in r.capture.timestamp[:4] or r.capture.timestamp[:4] == "2020"
 
-    digests = [r.capture.digest for r in records if r.capture.digest]
-    assert len(digests) == len(set(digests)), "duplicate digests slipped through"
+    identities = [(canonical_url(r.capture.url), r.capture.digest) for r in records if r.capture.digest]
+    assert len(identities) == len(set(identities)), "duplicate page/digest captures slipped through"

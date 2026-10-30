@@ -1,8 +1,7 @@
-"""Fetch + extract main text for every capture in a harvest JSONL.
+"""Normalize capture windows and partition by publication date, then capture time.
 
-Usage:
-    uv run python scripts/run_normalize.py <collection_id> <[phase_name|all]> [--max-docs N] [--no-cache]
-
+Use --rephase-only to regroup existing JSONL locally without fetching or extracting.
+Raw harvest files remain partitioned by capture windows.
 """
 from __future__ import annotations
 
@@ -11,55 +10,42 @@ import json
 import logging
 import sys
 
-from config import COVID_COLLECTIONS, PHASES_BY_NAME, RAW_DIR
+from config import COVID_COLLECTIONS, PHASES_BY_NAME, PROCESSED_DIR
 from ingest import ArchiveItClient
-from normalize import normalize_phase
+from normalize import normalize_collection
+from normalize.phases import rephase_normalized
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser()
-    p.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
-    p.add_argument("phase_name", choices=list(PHASES_BY_NAME) + ["all"])
-    p.add_argument("--max-docs", type=int, default=None)
-    p.add_argument("--no-cache", action="store_true")
-    p.add_argument("--timeout", type=float, default=60.0)
-    return p.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
+    parser.add_argument("phase_name", choices=list(PHASES_BY_NAME) + ["all"],
+                        help="Capture window(s) to fetch; outputs are regrouped by event date")
+    parser.add_argument("--max-docs", type=int, default=None)
+    parser.add_argument("--no-cache", action="store_true")
+    parser.add_argument("--rephase-only", action="store_true",
+                        help="Repartition all existing normalized records, without network or extraction")
+    parser.add_argument("--timeout", type=float, default=60.)
+    return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-    if args.phase_name == "all":
-        for p in PHASES_BY_NAME:
-            print(f"\n=== Normalizing phase {p} ===")
-            sys.argv[2] = p
-            if main() != 0:
-                return 1
-    
-    captures_jsonl = (
-        RAW_DIR / "captures" / str(args.collection_id) / f"{args.phase_name}.jsonl"
-    )
-    if not captures_jsonl.exists():
-        print(
-            f"missing harvest file: {captures_jsonl}\n"
-            f"run `uv run python scripts/harvest.py {args.collection_id} "
-            f"{args.phase_name}` first.",
-            file=sys.stderr,
-        )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    try:
+        if args.rephase_only:
+            path = PROCESSED_DIR / "normalized" / str(args.collection_id)
+            summary = rephase_normalized(path)
+        else:
+            phases = list(PHASES_BY_NAME) if args.phase_name == "all" else [args.phase_name]
+            with ArchiveItClient(timeout=args.timeout) as client:
+                path, summary = normalize_collection(client, args.collection_id, phases,
+                                                       use_cache=not args.no_cache, max_docs=args.max_docs)
+    except (ValueError, FileNotFoundError) as error:
+        print(str(error), file=sys.stderr)
         return 2
-    with ArchiveItClient(timeout=args.timeout) as client:
-        path, stats = normalize_phase(
-            client,
-            captures_jsonl,
-            use_cache=not args.no_cache,
-            max_docs=args.max_docs,
-        )
-
-    print(f"\nwrote {path}")
-    print(json.dumps(stats.as_dict(), indent=2))
+    print(f"Wrote sorted event-phase partitions to {path}")
+    print(json.dumps(summary, indent=2))
     return 0
 
 

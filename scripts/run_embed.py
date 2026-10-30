@@ -44,6 +44,10 @@ def parse_args() -> argparse.Namespace:
         help="Embedding model (default: BAAI/bge-m3)",
     )
     p.add_argument(
+        "--collection-name", default="credleaf",
+        help="Target collection; use credleaf_dedup_v2 when rebuilding legacy data",
+    )
+    p.add_argument(
         "--batch-size",
         type=int,
         default=256,
@@ -88,14 +92,13 @@ def main() -> int:
     if not deduped_path.exists():
         print(
             f"missing deduped file: {deduped_path}\n"
-            f"run `uv run python scripts/_dedupe.py {args.collection_id} "
-            f"{args.phase_name}` first.",
+            f"run `uv run python scripts/_dedupe.py {args.collection_id}` first.",
             file=sys.stderr,
         )
         return 2
 
     # Qdrant collection name: one collection for hnsw index optimization, not per phase"
-    collection_name = f"credleaf"
+    collection_name = args.collection_name
 
     # Embed and write to Qdrant
     chunk_count = embed_to_qdrant(

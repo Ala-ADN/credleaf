@@ -74,14 +74,11 @@ def build_registry(
     if extra_authoritative:
         authoritative |= {d for d in extra_authoritative if d}
 
-    # Dedup across tiers (priority: authoritative > low > mixed). Each domain
-    # ends up in exactly one set so set sizes are honest counts.
-    low -= authoritative
-    mixed -= authoritative
-    mixed -= low
+    # Apply priority across parent/child domains too, not just exact strings.
+    registry = CredibilityRegistry(low=low, mixed=mixed).with_authoritative(authoritative)
 
     log.info(
         "build_registry: low=%d authoritative=%d mixed=%d",
-        len(low), len(authoritative), len(mixed),
+        len(registry.low), len(registry.authoritative), len(registry.mixed),
     )
-    return CredibilityRegistry(low=low, authoritative=authoritative, mixed=mixed)
+    return registry

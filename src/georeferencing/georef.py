@@ -20,6 +20,7 @@ from typing import Iterable
 from config import PROCESSED_DIR
 from credibility import CredibilityRegistry
 from normalize import NormalizedDoc
+from document_time import document_time, parse_timestamp
 
 from .extract import ToponymExtractor
 from .gazetteer import Gazetteer
@@ -200,7 +201,8 @@ def _make_doc(
         collection_id=doc.collection_id,
         seed_id=doc.seed_id,
         seed_url=doc.seed_url,
-        phase=doc.phase,
+        phase=document_time(doc.model_dump()).phase,
+        capture_phase=doc.capture_phase or doc.phase,
         capture_timestamp=doc.capture_timestamp,
         publish_date=doc.publish_date,
         event_date=event_date,
@@ -222,23 +224,13 @@ def _make_doc(
 # ---- date handling ----
 
 def _parse_publish_date(value: str | None) -> date | None:
-    if not value:
-        return None
-    # trafilatura may emit YYYY-MM-DD or full ISO datetime; tolerate both.
-    try:
-        return datetime.fromisoformat(value.split("T", 1)[0]).date()
-    except ValueError:
-        return None
+    parsed = parse_timestamp(value)
+    return parsed.date() if parsed else None
 
 
 def _parse_capture_date(value: str) -> date | None:
-    # capture_timestamp is YYYYMMDDhhmmss
-    if not value or len(value) < 8:
-        return None
-    try:
-        return datetime.strptime(value[:8], "%Y%m%d").date()
-    except ValueError:
-        return None
+    parsed = parse_timestamp(value, capture=True)
+    return parsed.date() if parsed else None
 
 
 def _iso_week(d: date) -> str:
@@ -248,11 +240,11 @@ def _iso_week(d: date) -> str:
 
 def _event_date(doc: NormalizedDoc) -> tuple[str, str, str]:
     """Return (ISO date string, ISO year-week, source) for this doc."""
-    pub = _parse_publish_date(doc.publish_date)
-    if pub is not None:
-        return pub.isoformat(), _iso_week(pub), "publish"
-    cap = _parse_capture_date(doc.capture_timestamp) or date(1970, 1, 1)
-    return cap.isoformat(), _iso_week(cap), "capture"
+    resolved = document_time(doc.model_dump())
+    if resolved.timestamp is None:
+        raise ValueError("Document has neither a valid publication date nor capture timestamp")
+    day = resolved.timestamp.date()
+    return day.isoformat(), _iso_week(day), "publish" if resolved.source == "publish_date" else "capture"
 
 
 # ---- spatial metrics ----

@@ -14,6 +14,7 @@ import pytest
 from config import PHASES_BY_NAME
 from ingest import ArchiveItClient, harvest_phase
 from normalize import load_normalized, normalize_phase
+from document_time import document_time
 
 
 @pytest.fixture(scope="module")
@@ -73,7 +74,8 @@ def test_normalize_end_to_end(
     for d in docs:
         assert d.fetch_status in valid
         assert d.collection_id == 13559
-        assert d.phase == "P1_global_onset"
+        assert d.capture_phase == "P1_global_onset"
+        assert d.phase == document_time(d.model_dump()).phase
         if d.fetch_status == "ok":
             assert d.text and len(d.text) > 0
             assert d.word_count == len(d.text.split())

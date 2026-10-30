@@ -76,3 +76,90 @@ PANDEMIC_PHASES: list[Phase] = [
 ]
 
 PHASES_BY_NAME: dict[str, Phase] = {p.name: p for p in PANDEMIC_PHASES}
+
+
+@dataclass(frozen=True)
+class PandemicEvent:
+    """A dated historical milestone, independent of the corpus sampling phases."""
+
+    date: str  # ISO date of the event (not the publication date of its source)
+    title: str  # short enough for an animation callout
+    description: str
+    source_url: str
+
+
+# Curated from Wikipedia's pandemic timeline and the linked response articles.
+# Keep these in chronological order. Store the facts locally so notebook reruns
+# are reproducible and do not require live Wikipedia requests.
+COVID_TIMELINE_EVENTS: tuple[PandemicEvent, ...] = (
+    PandemicEvent(
+        "2019-12-31", "Wuhan reports pneumonia cluster",
+        "Wuhan health officials publish a notice about unexplained pneumonia.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_2019#31_December",
+    ),
+    PandemicEvent(
+        "2020-01-23", "Wuhan enters lockdown",
+        "Travel restrictions begin in Wuhan as the outbreak grows.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_January_2020#23_January",
+    ),
+    PandemicEvent(
+        "2020-01-30", "WHO declares global emergency",
+        "WHO declares a Public Health Emergency of International Concern.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_January_2020#30_January",
+    ),
+    PandemicEvent(
+        "2020-03-09", "Italy announces national lockdown",
+        "Italy extends movement restrictions across the country.",
+        "https://en.wikipedia.org/wiki/COVID-19_lockdowns_in_Italy",
+    ),
+    PandemicEvent(
+        "2020-03-11", "WHO characterizes a pandemic",
+        "WHO describes the worldwide COVID-19 outbreak as a pandemic.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_March_2020#11_March",
+    ),
+    PandemicEvent(
+        "2020-03-24", "India announces national lockdown",
+        "A 21-day nationwide lockdown is announced, starting on 25 March.",
+        "https://en.wikipedia.org/wiki/Responses_to_the_COVID-19_pandemic_in_March_2020#24_March_2",
+    ),
+    PandemicEvent(
+        "2020-04-02", "One million confirmed cases",
+        "Reported COVID-19 cases worldwide pass one million.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_April_2020#2_April",
+    ),
+    PandemicEvent(
+        "2020-12-02", "UK authorizes Pfizer vaccine",
+        "The UK authorizes the Pfizer-BioNTech vaccine for mass immunisation.",
+        "https://en.wikipedia.org/wiki/Responses_to_the_COVID-19_pandemic_in_December_2020#2_December",
+    ),
+    PandemicEvent(
+        "2020-12-08", "UK begins Pfizer vaccinations",
+        "The UK begins its public Pfizer-BioNTech vaccination programme.",
+        "https://en.wikipedia.org/wiki/Responses_to_the_COVID-19_pandemic_in_December_2020#8_December",
+    ),
+    PandemicEvent(
+        "2021-05-31", "WHO introduces the Delta name",
+        "WHO assigns Greek-letter names to variants, including Delta.",
+        "https://en.wikipedia.org/wiki/SARS-CoV-2_Delta_variant",
+    ),
+    PandemicEvent(
+        "2021-11-26", "Omicron designated a concern",
+        "WHO names Omicron and classifies it as a variant of concern.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_November_2021#26_November",
+    ),
+    PandemicEvent(
+        "2022-03-28", "Shanghai lockdown begins",
+        "A phased lockdown begins in Shanghai during an Omicron outbreak.",
+        "https://en.wikipedia.org/wiki/2022_Shanghai_COVID-19_outbreak",
+    ),
+    PandemicEvent(
+        "2022-12-07", "China eases zero-COVID rules",
+        "China rolls back major testing and quarantine restrictions.",
+        "https://en.wikipedia.org/wiki/Zero-COVID#China",
+    ),
+    PandemicEvent(
+        "2023-05-05", "WHO ends global emergency",
+        "WHO ends the emergency designation; COVID-19 remains a health threat.",
+        "https://en.wikipedia.org/wiki/Timeline_of_the_COVID-19_pandemic_in_2023#5_May",
+    ),
+)

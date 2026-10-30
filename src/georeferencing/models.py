@@ -55,6 +55,7 @@ class GeoDoc(BaseModel):
     seed_id: int
     seed_url: str
     phase: str
+    capture_phase: str | None = None
     capture_timestamp: str
     publish_date: str | None = None
 

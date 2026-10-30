@@ -1,158 +1,106 @@
-"""Near-Deduplicate normalized documents per collection using MinHash + LSH.
+"""Deduplicate a collection across phase files, preserving sources and months.
 
-Usage:
-	uv run python scripts/_dedupe.py <collection_id> [--max-docs N]
-
-Outputs one JSONL per phase at:
-	data/processed/deduped/<collection_id>/<phase>.jsonl
+Usage: uv run python scripts/_dedupe.py <collection_id> [--max-docs N]
+Outputs phase JSONL files plus duplicate provenance and a summary. Existing
+outputs are backed up before replacement; normalized inputs are never modified.
 """
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import logging
-import re
-import sys
-from collections import defaultdict
 from pathlib import Path
+import shutil
+import sys
+import tempfile
 
-from datasketch import MinHash, MinHashLSH
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 
-from config import COVID_COLLECTIONS, PROCESSED_DIR
-
-K_SHINGLE = 5  # word k-shingle size
-N_HASHES = 128  # MinHash signature length
-THRESHOLD = 0.90
-
-_word_re = re.compile(r"\w+")
-_logger = logging.getLogger(__name__)
-
-def load_jsonl(path: Path, max_docs: int | None = None) -> tuple[list[dict], list[str]]:
-    docs, raw_lines = [], []
-    with path.open(encoding="utf-8") as fh:
-        for i, line in enumerate(fh):
-            if max_docs is not None and i >= max_docs:
-                break
-            if line := line.strip():
-                docs.append(json.loads(line))
-                raw_lines.append(line)
-    return docs, raw_lines
+from config import COVID_COLLECTIONS, PHASES_BY_NAME, PROCESSED_DIR
+from normalize.dedupe import THRESHOLD, deduplicate_documents
+from normalize.phases import PHASE_FILES
+from document_time import OUTSIDE_STUDY, UNDATED, assign_document_time
 
 
-def get_shingles(text: str | None, k: int = K_SHINGLE) -> set[str]:
-    if not isinstance(text, str) or not text:
-        return set()
-    tokens = _word_re.findall(text.lower())
-    if len(tokens) < k:
-        return {" ".join(tokens)} if tokens else set()
-    return {" ".join(tokens[i:i + k]) for i in range(len(tokens) - k + 1)}
+def dedupe_collection(normalized_root: Path, output_root: Path, *, max_docs=None, threshold=THRESHOLD):
+    if normalized_root.resolve() == output_root.resolve():
+        raise ValueError("Deduplication output must not overwrite normalized inputs")
+    if max_docs is not None and max_docs < 1:
+        raise ValueError("max_docs must be positive")
+    files = sorted(p for p in normalized_root.glob("*.jsonl") if p.stem in PHASE_FILES)
+    if not files:
+        raise ValueError(f"No configured phase JSONL files in {normalized_root}")
+    records = []
+    for path in files:
+        count = 0
+        with path.open(encoding="utf-8") as source:
+            for line_number, line in enumerate(source, start=1):
+                if not line.strip():
+                    continue
+                if max_docs is not None and count >= max_docs:
+                    break
+                records.append(dict(doc=assign_document_time(json.loads(line)), origin=f"{path.name}:{line_number}", file=path.name))
+                count += 1
+    result = deduplicate_documents(records, threshold=threshold)
+    output_root.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".dedupe-", dir=output_root.parent) as temporary:
+        staging = Path(temporary)
+        output_phases = [*PHASES_BY_NAME, OUTSIDE_STUDY, UNDATED]
+        for phase_name in output_phases:
+            rows = sorted((item for item in result.kept if item["doc"]["phase"] == phase_name),
+                          key=lambda item: (item["doc"].get("event_date") or "9999",
+                                            str(item["doc"].get("capture_timestamp") or ""),
+                                            str(item["doc"].get("capture_url") or "")))
+            with (staging / f"{phase_name}.jsonl").open("w", encoding="utf-8") as target:
+                for item in rows:
+                    target.write(json.dumps(item["doc"], ensure_ascii=False) + "\n")
+        (staging / "audit").mkdir()
+        with (staging / "audit/duplicates.jsonl").open("w", encoding="utf-8") as target:
+            for record in result.audit:
+                target.write(json.dumps(record, ensure_ascii=False) + "\n")
+        summary = dict(result.stats, input_directory=str(normalized_root),
+                       phases=output_phases,
+                       scope="exact: collection + host + observation month + language; near: same page URL too",
+                       selection="article extraction, available publication date, most complete text, earliest capture",
+                       safeguards="direct representative match; number/negation changes retained; normalized inputs unchanged")
+        (staging / "dedupe_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        if output_root.exists():
+            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            backup = output_root.parent.parent / "dedupe_backups" / output_root.parent.name / output_root.name / stamp
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(output_root, backup)
+            summary["backup"] = str(backup)
+            (staging / "dedupe_summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        output_root.mkdir(parents=True, exist_ok=True)
+        for path in staging.rglob("*"):
+            if path.is_file():
+                destination = output_root / path.relative_to(staging)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                path.replace(destination)
+        legacy_alias = output_root / "P1_first_wave.jsonl"
+        if legacy_alias.exists():
+            legacy_alias.unlink()  # preserved in the dated backup
+    return summary
 
 
-def to_minhash(shingles: set[str]) -> MinHash:
-    m = MinHash(num_perm=N_HASHES)
-    for s in shingles:
-        m.update(s.encode())
-    return m
-
-
-def jaccard(s1: set[str], s2: set[str]) -> float:
-    if not s1 or not s2:
-        return 0.0
-    return len(s1 & s2) / (len(s1) + len(s2) - len(s1 & s2))
-
-
-def dedupe_phase(normalized_path: Path, output_path: Path, max_docs: int | None = None) -> None:
-    docs, raw_lines = load_jsonl(normalized_path, max_docs=max_docs)
-    if not docs:
-        print(f"no docs in {normalized_path}")
-        return
-
-    ok_positions = [i for i, d in enumerate(docs) if d.get("fetch_status") == "ok"]
-    ok_docs = [docs[i] for i in ok_positions]
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if len(ok_docs) < 2:
-        output_path.write_text("\n".join(raw_lines) + "\n", encoding="utf-8")
-        print(f"{normalized_path.name}: <2 ok docs, wrote unchanged")
-        _logger.info("%s: duplicate rate 0.00%% (%d/%d ok docs)", normalized_path.name, 0, len(ok_docs))
-        return
-
-    shingle_sets = [get_shingles(d.get("text")) for d in ok_docs]
-    minhashes = [to_minhash(s) for s in shingle_sets]
-
-    lsh = MinHashLSH(threshold=THRESHOLD, num_perm=N_HASHES)
-    for idx, mh in enumerate(minhashes):
-        lsh.insert(str(idx), mh)
-
-    dup_pairs = [
-    	(idx, j)
-    	for idx, mh in enumerate(minhashes)
-    	for match in lsh.query(mh)
-    	if (j := int(str(match))) > idx and jaccard(shingle_sets[idx], shingle_sets[j]) >= THRESHOLD
-	]
-
-    parent = list(range(len(ok_docs)))
-
-    def find(x: int) -> int:
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    for i, j in dup_pairs:
-        pi, pj = find(i), find(j)
-        if pi != pj:
-            parent[pi] = pj
-
-    clusters: dict[int, list[int]] = defaultdict(list)
-    for i in range(len(ok_docs)):
-        clusters[find(i)].append(i)
-
-    keep = {ok_positions[min(c)] for c in clusters.values()}
-
-    dup_count = len(ok_docs) - len(keep)
-    dup_percent = (dup_count / len(ok_docs)) * 100.0 if ok_docs else 0.0
-
-    with output_path.open("w", encoding="utf-8") as fh:
-        for i, line in enumerate(raw_lines):
-            if docs[i].get("fetch_status") != "ok" or i in keep:
-                fh.write(line + "\n")
-
-    _logger.info(
-        "%s: duplicate rate %.2f%% (%d/%d ok docs)",
-        normalized_path.name,
-        dup_percent,
-        dup_count,
-        len(ok_docs),
-    )
-    print(f"wrote {output_path}")
-
-
-def main() -> int:
-    p = argparse.ArgumentParser()
-    p.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
-    p.add_argument("--max-docs", type=int, default=None)
-    args = p.parse_args()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-
-    normalized_root = PROCESSED_DIR / "normalized" / str(args.collection_id)
-    if not normalized_root.exists():
-        print(f"missing normalized dir: {normalized_root}", file=sys.stderr)
-        return 2
-
-    phase_files = sorted(normalized_root.glob("*.jsonl"))
-    if not phase_files:
-        print(f"no JSONL files in {normalized_root}", file=sys.stderr)
-        return 3
-
-    output_root = PROCESSED_DIR / "deduped" / str(args.collection_id)
-    for path in phase_files:
-        dedupe_phase(path, output_root / path.name, max_docs=args.max_docs)
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
+    parser.add_argument("--max-docs", type=int)
+    parser.add_argument("--threshold", type=float, default=THRESHOLD)
+    parser.add_argument("--output-dir", type=Path, default=PROCESSED_DIR / "deduped",
+                        help="Output root; collection ID is appended")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
+    try:
+        summary = dedupe_collection(PROCESSED_DIR / "normalized" / str(args.collection_id),
+                                    args.output_dir / str(args.collection_id),
+                                    max_docs=args.max_docs, threshold=args.threshold)
+    except (ValueError, FileNotFoundError) as error:
+        parser.error(str(error))
+    print(json.dumps(summary, indent=2))
     return 0
 
 

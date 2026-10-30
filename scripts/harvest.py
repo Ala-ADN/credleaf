@@ -37,6 +37,8 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--max-seeds", type=int, default=None)
     p.add_argument("--max-captures-per-seed", type=int, default=None)
+    p.add_argument("--max-captures-per-url", type=int, default=1,
+                   help="Captures per canonical URL per capture phase (default 1); 0 retains all changed revisions")
     p.add_argument("--active-only", action="store_true",
                    help="Skip seeds where active=False")
     p.add_argument(
@@ -66,6 +68,7 @@ def main() -> int:
                 include_inactive=not args.active_only,
                 max_seeds=args.max_seeds,
                 max_captures_per_seed=args.max_captures_per_seed,
+                max_captures_per_url=args.max_captures_per_url,
                 match_type=args.match_type,
             )
             for name, path in paths.items():
@@ -80,6 +83,7 @@ def main() -> int:
                 include_inactive=not args.active_only,
                 max_seeds=args.max_seeds,
                 max_captures_per_seed=args.max_captures_per_seed,
+                max_captures_per_url=args.max_captures_per_url,
                 match_type=args.match_type,
             )
             print(f"\nwrote {path}")

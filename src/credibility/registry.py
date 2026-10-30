@@ -4,8 +4,8 @@ Three tiers: `low` (curated misinformation seeds), `authoritative` (curated
 top-tier health/science sources), and `mixed` (collections that are not
 uniformly one or the other — e.g. mainstream media + government).
 
-Lookup walks the domain tree (`news.cdc.gov` → `cdc.gov`) and returns the
-first tier match in priority order:
+Lookup checks the whole domain tree (`news.cdc.gov` → `cdc.gov`) for each
+tier in priority order:
 
     authoritative > low > mixed > unknown
 
@@ -86,13 +86,13 @@ class CredibilityRegistry:
         host = normalize_host(url_or_host)
         if host is None:
             return "unknown"
-        for candidate in _domain_chain(host):
-            if candidate in self.authoritative:
-                return "authoritative"
-            if candidate in self.low:
-                return "low"
-            if candidate in self.mixed:
-                return "mixed"
+        candidates = tuple(_domain_chain(host))
+        # A mixed/low seed such as afro.who.int must not shadow the curated
+        # authoritative parent who.int. Tier priority applies across suffixes.
+        for tier in ("authoritative", "low", "mixed"):
+            domains = getattr(self, tier)
+            if any(candidate in domains for candidate in candidates):
+                return tier
         return "unknown"
 
     # Convenience for incrementally extending the registry
@@ -104,10 +104,20 @@ class CredibilityRegistry:
         )
 
     def with_authoritative(self, domains: Iterable[str]) -> CredibilityRegistry:
-        return CredibilityRegistry(
+        """Add reviewed domains and remove lower-tier hosts they now cover.
+
+        Preserve existing authoritative overrides. Pruning uses the same suffix
+        matching as lookup, so saved tier counts also reflect the new policy.
+        """
+        updated = CredibilityRegistry(
             low=self.low,
             authoritative=set(self.authoritative) | set(self._clean(domains)),
             mixed=self.mixed,
+        )
+        return CredibilityRegistry(
+            low=(host for host in updated.low if updated.lookup(host) == "low"),
+            authoritative=updated.authoritative,
+            mixed=(host for host in updated.mixed if updated.lookup(host) == "mixed"),
         )
 
     def with_mixed(self, domains: Iterable[str]) -> CredibilityRegistry:

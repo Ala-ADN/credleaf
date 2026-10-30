@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import logging
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+import tempfile
 
 import httpx
 
-from config import CACHE_DIR, PROCESSED_DIR
+from config import CACHE_DIR, PROCESSED_DIR, RAW_DIR, PHASES_BY_NAME
+from document_time import assign_document_time, phase_for_date, parse_timestamp
 from ingest import ArchiveItClient, CaptureRecord, load_jsonl
 
 from .extract import (
@@ -19,6 +22,7 @@ from .extract import (
     save_cached_html,
 )
 from .models import FetchStatus, NormalizedDoc
+from .phases import load_phase_records, write_phase_partitions
 
 log = logging.getLogger(__name__)
 
@@ -60,11 +64,12 @@ def _make_doc(
 ) -> NormalizedDoc:
     content = extracted.model_dump() if extracted is not None else {}
     text = content.get("text") or ""
-    return NormalizedDoc(
+    return NormalizedDoc(**assign_document_time(dict(
         collection_id=rec.collection_id,
         seed_id=rec.seed_id,
         seed_url=rec.seed_url,
         phase=rec.phase,
+        capture_phase=rec.phase,
         capture_timestamp=rec.capture.timestamp,
         capture_url=rec.capture.url,
         digest=rec.capture.digest,
@@ -74,7 +79,7 @@ def _make_doc(
         word_count=len(text.split()),
         char_count=len(text),
         **content,
-    )
+    )))
 
 
 def _process(
@@ -135,7 +140,9 @@ def normalize_phase(
     if output_path is None:
         cid = records[0].collection_id
         phase = records[0].phase
-        output_path = PROCESSED_DIR / "normalized" / str(cid) / f"{phase}.jsonl"
+        # A single harvest batch can contain several publication phases. The
+        # collection driver below publishes the final event-phase partitions.
+        output_path = PROCESSED_DIR / "normalized_batches" / str(cid) / f"{phase}.jsonl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     stats = NormalizeStats()
@@ -166,3 +173,44 @@ def load_normalized(path: Path) -> list[NormalizedDoc]:
             import json
             docs.append(NormalizedDoc.model_validate(json.loads(line)))
     return docs
+
+
+def normalize_collection(
+    client: ArchiveItClient, collection_id: int, capture_phases: list[str], *,
+    raw_root: Path = RAW_DIR / "captures", output_root: Path = PROCESSED_DIR / "normalized",
+    cache_root: Path = CACHE_DIR, use_cache: bool = True, max_docs: int | None = None,
+) -> tuple[Path, dict]:
+    """Normalize requested capture windows, then publish sorted event phases.
+
+    Updating one capture window preserves records from the other windows even
+    when they share a publication-phase output file. ``all`` replaces the full
+    corpus. Raw capture partitions always retain their original meaning.
+    """
+    if not capture_phases or any(phase not in PHASES_BY_NAME for phase in capture_phases):
+        raise ValueError("Select at least one configured capture phase")
+    if max_docs is not None and max_docs < 1:
+        raise ValueError("max_docs must be positive")
+    paths = [raw_root / str(collection_id) / f"{phase}.jsonl" for phase in capture_phases]
+    for path in paths:
+        if not path.is_file():
+            raise FileNotFoundError(f"Missing harvest file: {path}")
+    output = output_root / str(collection_id)
+    selected = set(capture_phases)
+    records = []
+    if selected != set(PHASES_BY_NAME):
+        for record in load_phase_records(output):
+            actual_capture_phase = phase_for_date(parse_timestamp(record.get("capture_timestamp"), capture=True))
+            if (actual_capture_phase or record.get("capture_phase") or record.get("phase")) not in selected:
+                records.append(record)
+    statistics = {}
+    with tempfile.TemporaryDirectory(prefix="credleaf-normalize-") as temporary:
+        for path in paths:
+            batch, stats = normalize_phase(client, path, output_path=Path(temporary) / path.name,
+                                            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs)
+            statistics[path.stem] = stats.as_dict()
+            if batch.is_file():
+                with batch.open(encoding="utf-8") as source:
+                    records.extend(json.loads(line) for line in source if line.strip())
+    summary = write_phase_partitions(records, output)
+    summary["normalization"] = statistics
+    return output, summary
