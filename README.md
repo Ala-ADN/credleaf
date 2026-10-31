@@ -78,6 +78,13 @@ seed URL, where those pages exist in the archive.
 
 Stages write reusable artifacts so steps are independently re-runnable:
 
+Build an immutable snapshot with **`credleaf_build_corpus`**, then analyze its ID
+with **`credleaf_analyze_corpus`**. Per-collection task groups isolate failures;
+checksummed artifacts and explicit build/reuse/off modes make reruns auditable.
+Each run produces a Markdown/JSON overview of outputs and actual task states. See
+[Airflow setup and controls](airflow/README.md) for installation, the complete
+settings table and examples of rerunning downstream steps from existing data.
+
 | Stage             | Where                                                        | Output                                               |
 | ----------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
 | Harvest           | [scripts/harvest.py](scripts/harvest.py)                     | `data/raw/captures/{cid}/{phase}.jsonl`              |
@@ -293,27 +300,37 @@ vectors are consistent with the embedding CLI's BGE-M3 default.
 
 ## Quickstart
 
-```powershell
-# 1. Sync deps (uv) + spaCy transformer model + GeoNames gazetteer
-uv sync
-uv run python -m spacy download en_core_web_trf
-uv run python -m georeferencing.setup_gazetteer
+```bash
+# 1. Build and start Airflow + Qdrant
+export AIRFLOW_UID="$(id -u)"
+mkdir -p data notebooks/animation_out
+docker compose up -d --build
 
-# 2. Harvest + normalize (one collection at a time; phase = all)
-uv run python scripts/harvest.py 13559 all
-uv run python scripts/run_normalize.py 13559 all
-uv run python scripts/_dedupe.py 13559
-uv run python scripts/build_credibility.py
+# 2. Prepare the persistent gazetteer cache (once)
+docker compose run --rm airflow bash -c \
+  '$CREDLEAF_PYTHON -m georeferencing.setup_gazetteer'
 
-# 3. Georef
-uv run python scripts/georef.py 13559 all
-uv run python scripts/georef.py 4887 all
-
-# 4. Explore
-uv run jupyter lab notebooks/
+# 3. Get credentials, then trigger credleaf_build_corpus at localhost:8080.
+# Use its published snapshot ID in credleaf_analyze_corpus.
+docker compose logs -f airflow
 ```
 
-> Every stage supports `--max-docs N` for a quick slice
+The image includes the Python environments and spaCy model. Artifacts and run
+overviews live in `data/pipeline/`; model caches persist in `data/cache/`. See the
+[Airflow guide](airflow/README.md) for container controls and the local Python
+alternative. To explore the results locally, run `uv sync --group dev` followed
+by `uv run jupyter lab notebooks/`.
+
+For a quick slice, use the harvest seed/capture caps and normalization document
+cap in the trigger form. [The Airflow guide](airflow/README.md) includes a small
+run and explains which outputs each cap replaces.
+
+Every data step reports an ETA in its logs and structured report, using live
+harvest/extraction progress or comparable successful runs. Use
+`scripts/pipeline_status.py --run-id RUN_ID --watch` with the project interpreter
+and `PYTHONPATH=src` for a live table. New configurations show `calibrating` until
+there is enough evidence. The [overnight runbook](airflow/OVERNIGHT.md) recommends
+extracting the existing raw-capture backlog first and includes trigger profiles.
 
 ## Project layout
 
@@ -325,6 +342,9 @@ src/
   embed/           chonkie semantic chunking → Qdrant
   georeferencing/  spaCy NER + GeoNames gazetteer
   analysis/        cross-pipeline helpers
+  pipeline/        snapshot contracts/store, planner, isolated worker and reporting
+dags/              build-corpus and analyze-corpus Airflow DAGs
+airflow/           isolated Airflow requirements and operation guide
 notebooks/
   01_normalized_eda.ipynb        corpus health, fetch quality, redundancy
   02_georeferencing_eda.ipynb    the geographic story
@@ -361,7 +381,7 @@ data/                            JSONL artifacts
 
 - [ ] Add URL deduping to harvest scripts
 - [ ] Migrate form JSONL to SQLite? for better queryability
-- [ ] Migrate from scripts to a proper DAG runner
+- [x] Immutable corpus/analysis snapshots, isolated collection task groups, quality gates and per-step overviews
 
 ## Status
 

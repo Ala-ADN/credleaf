@@ -1,0 +1,17 @@
+{
+  "base_snapshot_id": null,
+  "collection_ids": [13559, 13529],
+  "capture_phase": "all",
+  "harvest_mode": "reuse",
+  "credibility_mode": "reuse",
+  "normalize_mode": "build",
+  "normalize_max_docs": 1500,
+  "normalize_use_cache": true,
+  "normalize_timeout": 45,
+  "normalize_min_ok": 100,
+  "normalize_max_error_fraction": 0.15,
+  "dedupe_mode": "build",
+  "dedupe_max_docs": null,
+  "georef_mode": "off",
+  "embed_mode": "off"
+}

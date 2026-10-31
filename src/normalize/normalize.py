@@ -130,9 +130,13 @@ def normalize_phase(
     cache_root: Path = CACHE_DIR,
     use_cache: bool = True,
     max_docs: int | None = None,
+    progress=None,
 ) -> tuple[Path, NormalizeStats]:
     """Read a harvest JSONL, fetch+extract each capture, write normalized JSONL."""
     records = list(load_jsonl(captures_jsonl))
+    total = min(len(records), max_docs) if max_docs is not None else len(records)
+    if progress:
+        progress(0, total)
     if not records:
         log.warning(ValueError(f"no records in {captures_jsonl}"))
         return output_path or Path(), NormalizeStats()
@@ -158,6 +162,8 @@ def normalize_phase(
             stats.total += 1
             doc = _process(client, rec, cache_root, use_cache, stats)
             fh.write(doc.model_dump_json() + "\n")
+            if progress:
+                progress(stats.total, total)
 
     log.info("normalize done: %s", stats.as_dict())
     return output_path, stats
@@ -178,7 +184,7 @@ def load_normalized(path: Path) -> list[NormalizedDoc]:
 def normalize_collection(
     client: ArchiveItClient, collection_id: int, capture_phases: list[str], *,
     raw_root: Path = RAW_DIR / "captures", output_root: Path = PROCESSED_DIR / "normalized",
-    cache_root: Path = CACHE_DIR, use_cache: bool = True, max_docs: int | None = None,
+    cache_root: Path = CACHE_DIR, use_cache: bool = True, max_docs: int | None = None, progress=None,
 ) -> tuple[Path, dict]:
     """Normalize requested capture windows, then publish sorted event phases.
 
@@ -203,10 +209,20 @@ def normalize_collection(
             if (actual_capture_phase or record.get("capture_phase") or record.get("phase")) not in selected:
                 records.append(record)
     statistics = {}
+    completed = 0
+    total = 0
+    if progress:
+        for path in paths:
+            with path.open(encoding="utf-8") as source:
+                count = sum(bool(line.strip()) for line in source)
+            total += min(count, max_docs) if max_docs is not None else count
+        progress(0, total)
     with tempfile.TemporaryDirectory(prefix="credleaf-normalize-") as temporary:
         for path in paths:
             batch, stats = normalize_phase(client, path, output_path=Path(temporary) / path.name,
-                                            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs)
+                                            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs,
+                                            progress=(lambda done, _: progress(completed + done, total)) if progress else None)
+            completed += stats.total
             statistics[path.stem] = stats.as_dict()
             if batch.is_file():
                 with batch.open(encoding="utf-8") as source:

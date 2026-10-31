@@ -3,12 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+import os
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR = Path(os.environ.get("CREDLEAF_DATA_DIR", PROJECT_ROOT / "data"))
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
-CACHE_DIR = DATA_DIR / "cache"
+CACHE_DIR = Path(os.environ.get("CREDLEAF_CACHE_DIR", DATA_DIR / "cache"))
 
 
 @dataclass(frozen=True)

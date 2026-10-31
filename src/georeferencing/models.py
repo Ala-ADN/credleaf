@@ -50,7 +50,7 @@ class GeoDoc(BaseModel):
     """One georeferenced article. Written one-per-line into the georef JSONL."""
 
     # Composite key + provenance (joins back to the normalized JSONL)
-    article_id: str  # f"{collection_id}:{seed_id}:{capture_timestamp}"
+    article_id: str  # hash of collection, canonical page, dates and content
     collection_id: int
     seed_id: int
     seed_url: str

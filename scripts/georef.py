@@ -16,6 +16,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import sys
@@ -100,6 +101,7 @@ def _run_one_phase(args: argparse.Namespace, *, shared_extractor: ToponymExtract
         registry=registry,
         max_docs=args.max_docs,
         resume=not args.no_resume,
+        resume_key=hashlib.sha256(pkl.read_bytes()).hexdigest(),
     )
     print(f"\nwrote {path}")
     print(json.dumps(stats.as_dict(), indent=2))

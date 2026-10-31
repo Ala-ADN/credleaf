@@ -1,4 +1,37 @@
 services:
+  airflow:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile
+    image: credleaf-airflow:3.1.5
+    user: "${AIRFLOW_UID:-50000}:0"
+    restart: unless-stopped
+    environment:
+      CREDLEAF_QDRANT_URL: http://qdrant:6333
+      CREDLEAF_ARCHIVE_SLOTS: "${CREDLEAF_ARCHIVE_SLOTS:-2}"
+    ports:
+      - "127.0.0.1:${AIRFLOW_PORT:-8080}:8080"
+    volumes:
+      - airflow_state:/opt/airflow
+      - ./data:/opt/credleaf/data
+      - ./dags:/opt/credleaf/dags:ro
+      - ./src:/opt/credleaf/src:ro
+      - ./scripts:/opt/credleaf/scripts:ro
+      - ./notebooks:/opt/credleaf/notebooks
+    depends_on:
+      qdrant:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v2/monitor/health', timeout=5)"
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+
   qdrant:
     image: qdrant/qdrant:latest
     restart: always
@@ -11,6 +44,9 @@ services:
         target: /qdrant/config/production.yaml
     volumes:
       - ./data/qdrant:/qdrant/storage
+
+volumes:
+  airflow_state:
 
 configs:
   qdrant_config:

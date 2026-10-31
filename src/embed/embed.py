@@ -28,14 +28,14 @@ def stable_chunk_id(collection_name: str, metadata: dict, text: str) -> str:
     return str(uuid.uuid5(uuid.NAMESPACE_URL, json.dumps(identity, ensure_ascii=False)))
 
 
-def _write_stable_chunks(handshake, chunks):
+def _write_stable_chunks(handshake, chunks, id_namespace=None):
     """Use public encoder/client methods instead of batch-position-based IDs."""
     from qdrant_client.models import PointStruct
     points = []
     for chunk in chunks:
         metadata = chunk.metadata
         points.append(PointStruct(
-            id=stable_chunk_id(handshake.collection_name, metadata, chunk.text),
+            id=stable_chunk_id(id_namespace or handshake.collection_name, metadata, chunk.text),
             vector=[float(value) for value in handshake.embedding_model.embed(chunk.text)],
             payload={**metadata, "text": chunk.text,
                      "start_index": chunk.start_index, "end_index": chunk.end_index,
@@ -51,6 +51,7 @@ def embed_to_qdrant(
     embedding_model: str = "sentence-transformers/all-mpnet-base-v2",
     batch_size: int = 256,
     show_progress: bool = True,
+    id_namespace: str | None = None,
 ) -> int:
     """Load normalized documents, chunk semantically, and write to Qdrant.
 
@@ -105,7 +106,7 @@ def embed_to_qdrant(
     def flush_batch() -> None:
         if not batch_chunks:
             return
-        _write_stable_chunks(handshake, batch_chunks)
+        _write_stable_chunks(handshake, batch_chunks, id_namespace=id_namespace)
         batch_chunks.clear()
         nonlocal batch_bytes
         batch_bytes = 0
@@ -176,7 +177,7 @@ def embed_to_qdrant(
                 chunk_text = getattr(chunk, "text", "")
                 if not chunk_text.strip():
                     continue
-                point_id = stable_chunk_id(collection_name, chunk.metadata, chunk_text)
+                point_id = stable_chunk_id(id_namespace or collection_name, chunk.metadata, chunk_text)
                 if point_id in seen_chunks:
                     continue
                 chunk_bytes = len(chunk_text.encode("utf-8"))

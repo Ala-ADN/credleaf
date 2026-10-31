@@ -46,7 +46,8 @@ def main():
         selection="article-months times square root of observed months; include every parent lineage",
         labels=tree.tracks[["track_id", "name", "parent_track"]].astype(object).where(
             pd.notna(tree.tracks[["track_id", "name", "parent_track"]]), None).to_dict("records"),
-        label_origin="display names reviewed against the root topic's keywords; names follow the displayed lineage",
+        label_origin=("explicit display overrides; other names from root topic keywords" if names
+                      else "automatic names from root topic keywords"),
         limitation="retrospective display projection; weaker edges/merges omitted; first observation is not necessarily birth",
     )
     args.gif.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n")

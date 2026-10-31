@@ -46,7 +46,8 @@ def load_qdrant_corpus(client, collection_name="credleaf"):
     return pd.DataFrame(records), np.asarray(vectors, dtype=np.float32)
 
 
-def prepare_semantic_corpus(data, embeddings, registry: CredibilityRegistry):
+def prepare_semantic_corpus(data, embeddings, registry: CredibilityRegistry, *,
+                            collection_ids=(13559, 13529), language="en", min_words=8):
     """Resolve current tiers, limit the primary corpus, deduplicate and align.
 
     Dates use valid publication metadata, otherwise capture time. The payload's
@@ -57,7 +58,7 @@ def prepare_semantic_corpus(data, embeddings, registry: CredibilityRegistry):
     if embeddings.ndim != 2 or len(data) != len(embeddings):
         raise ValueError("Metadata and embeddings must be aligned")
     dates = pd.Series(pd.to_datetime([document_time(row).timestamp for row in data.to_dict("records")], utc=True))
-    keep = (data.collection_id.isin([13559, 13529])
+    keep = (data.collection_id.isin(collection_ids)
             & dates.ge(pd.Timestamp(PANDEMIC_PHASES[0].start, tz="UTC"))
             & dates.lt(pd.Timestamp(PANDEMIC_PHASES[-1].end, tz="UTC") + pd.Timedelta(days=1)))
     data = data.loc[keep].reset_index(drop=True)
@@ -70,7 +71,7 @@ def prepare_semantic_corpus(data, embeddings, registry: CredibilityRegistry):
 
     data["credibility_tier"] = [tier(row) for row in data.itertuples()]
     data["source_host"] = data.seed_url.map(normalize_host).fillna("unknown")
-    data, embeddings, windows = prepare_corpus(data, embeddings)
+    data, embeddings, windows = prepare_corpus(data, embeddings, language=language, min_words=min_words)
     data["analysis_phase"] = ""
     for phase in PANDEMIC_PHASES:
         match = (data.timestamp.ge(pd.Timestamp(phase.start))

@@ -1,0 +1,16 @@
+{
+  "collection_ids": [13559, 13529],
+  "capture_phase": "all",
+  "harvest_max_seeds": 5,
+  "harvest_max_captures_per_seed": 10,
+  "harvest_max_captures_per_url": 1,
+  "harvest_match_type": "host",
+  "harvest_active_only": false,
+  "harvest_max_seed_error_fraction": 0,
+  "normalize_max_docs": null,
+  "normalize_min_ok": 1,
+  "normalize_max_error_fraction": 0.15,
+  "dedupe_max_docs": null,
+  "georef_mode": "off",
+  "embed_mode": "off"
+}

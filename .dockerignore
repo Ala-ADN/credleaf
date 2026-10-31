@@ -1,0 +1,15 @@
+**
+!pyproject.toml
+!uv.lock
+!airflow/
+!airflow/**
+!dags/
+!dags/**
+!src/
+!src/**
+!scripts/
+!scripts/**
+!notebooks/
+!notebooks/topic_tree_labels.json
+**/__pycache__/
+**/*.py[cod]

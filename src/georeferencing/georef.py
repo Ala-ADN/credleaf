@@ -12,6 +12,8 @@ from __future__ import annotations
 import json
 import logging
 import math
+import hashlib
+from importlib.metadata import PackageNotFoundError, version
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -21,6 +23,7 @@ from config import PROCESSED_DIR
 from credibility import CredibilityRegistry
 from normalize import NormalizedDoc
 from document_time import document_time, parse_timestamp
+from url_utils import canonical_url
 
 from .extract import ToponymExtractor
 from .gazetteer import Gazetteer
@@ -70,12 +73,20 @@ def georef_phase(
     max_docs: int | None = None,
     resume: bool = True,
     language_filter: str | None = "en",
+    resume_key: str | None = None,
 ) -> tuple[Path, GeorefStats]:
     """Read normalized JSONL, georef each doc, append to GeoDoc JSONL."""
     docs = list(_load_normalized(normalized_path))
     if not docs:
         log.warning("no docs in %s", normalized_path)
-        return output_path or Path(), GeorefStats()
+        # Empty event phases are valid pipeline outputs. Publish them explicitly,
+        # also clearing geography left behind by a previous, larger corpus.
+        if output_path is None:
+            output_path = PROCESSED_DIR / "georef" / normalized_path.parent.name / normalized_path.name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("", encoding="utf-8")
+        output_path.with_suffix(output_path.suffix + ".progress").write_text("", encoding="utf-8")
+        return output_path, GeorefStats()
 
     if output_path is None:
         cid = docs[0].collection_id
@@ -83,15 +94,28 @@ def georef_phase(
         output_path = PROCESSED_DIR / "georef" / str(cid) / f"{phase}.jsonl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     progress_path = output_path.with_suffix(output_path.suffix + ".progress")
+    state_path = output_path.with_suffix(output_path.suffix + ".progress.json")
+    try:
+        model_version = version(getattr(extractor, "model_name", "en_core_web_trf"))
+    except PackageNotFoundError:
+        model_version = "unknown"
+    identity = dict(version=2, input_sha256=hashlib.sha256(normalized_path.read_bytes()).hexdigest(),
+                    model=getattr(extractor, "model_name", type(extractor).__name__), model_version=model_version,
+                    device=getattr(extractor, "device", None),
+                    registry={tier: sorted(getattr(registry, tier, [])) for tier in ("low", "mixed", "authoritative")},
+                    language=language_filter, resume_key=resume_key)
 
     processed: set[str] = set()
-    if resume and progress_path.exists():
-        processed = {
-            line.strip()
-            for line in progress_path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        }
+    if resume and (progress_path.exists() or output_path.exists()):
+        if not state_path.is_file() or json.loads(state_path.read_text()) != identity:
+            raise ValueError("Georeferencing inputs/config changed or legacy progress found; rebuild with --no-resume")
+        # The output is authoritative: a crash between output and progress writes
+        # must not lose an article or cause it to be emitted a second time.
+        if output_path.exists():
+            with output_path.open(encoding="utf-8") as source:
+                processed = {json.loads(line)["article_id"] for line in source if line.strip()}
         log.info("resume: %d articles already processed", len(processed))
+    state_path.write_text(json.dumps(identity, sort_keys=True), encoding="utf-8")
 
     stats = GeorefStats()
     log.info(
@@ -134,6 +158,7 @@ def georef_phase(
 
             out_fh.write(geo_doc.model_dump_json() + "\n")
             prog_fh.write(article_id + "\n")
+            processed.add(article_id)
             emitted += 1
             if emitted % 50 == 0:
                 out_fh.flush()
@@ -157,7 +182,9 @@ def _load_normalized(path: Path) -> Iterable[NormalizedDoc]:
 
 
 def _article_id(doc: NormalizedDoc) -> str:
-    return f"{doc.collection_id}:{doc.seed_id}:{doc.capture_timestamp}"
+    identity = [doc.collection_id, canonical_url(doc.capture_url), doc.capture_timestamp,
+                doc.publish_date, hashlib.sha256((doc.text or "").encode()).hexdigest()]
+    return hashlib.sha256(json.dumps(identity).encode()).hexdigest()
 
 
 def _process_doc(

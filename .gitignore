@@ -8,6 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+.venv-airflow/
 
 # Tooling caches
 .pytest_cache/
@@ -19,6 +20,8 @@ data/raw/
 data/processed/
 data/cache/
 data/qdrant/
+data/airflow/
+data/pipeline/
 
 # Editor / OS
 .vscode/

@@ -37,6 +37,11 @@ def main():
     parser.add_argument("--min-topic-size", type=int, default=50)
     parser.add_argument("--min-chunks", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--registry", type=Path, default=PROCESSED_DIR / "credibility.json")
+    parser.add_argument("--collection-ids", type=int, nargs="+", default=[13559, 13529])
+    parser.add_argument("--language", default="en")
+    parser.add_argument("--min-words", type=int, default=8)
+    parser.add_argument("--embedding-model", default="unverified; legacy export")
     args = parser.parse_args()
     if args.min_chunks < 2 or args.min_topic_size < 6:
         parser.error("min-chunks must be >= 2 and min-topic-size >= 6")
@@ -54,9 +59,10 @@ def main():
         raw.to_json(input_dir / "metadata.jsonl", orient="records", lines=True)
         np.save(input_dir / "embeddings.npy", vectors)
 
-    registry_path = PROCESSED_DIR / "credibility.json"
+    registry_path = args.registry
     registry = CredibilityRegistry.load(registry_path)
-    data, embeddings, windows = prepare_semantic_corpus(raw, vectors, registry)
+    data, embeddings, windows = prepare_semantic_corpus(raw, vectors, registry,
+        collection_ids=args.collection_ids, language=args.language, min_words=args.min_words)
     print(f"Retained {len(data):,}/{len(raw):,} chunks; {len(windows)} monthly windows", flush=True)
     print(data.credibility_tier.value_counts().to_string(), flush=True)
     print("Fitting global BERTopic on existing normalized embeddings…", flush=True)
@@ -75,11 +81,11 @@ def main():
     metadata = dict(
         purpose="retrospective descriptive semantic EDA; no truth classification or causal inference",
         collection=args.collection, loaded_chunks=len(raw), retained_chunks=len(data),
-        language="en", primary_collections=[13559, 13529], frequency="M", min_words=8,
+        language=args.language, primary_collections=args.collection_ids, frequency="M", min_words=args.min_words,
         deduplication="exact source URL + whitespace-normalized text within month",
         timestamp="valid publish_date in UTC, otherwise capture_timestamp; analysis phase assigned from event time",
         weighting="chunks, not articles or source-balanced observations",
-        embedding_dimension=embeddings.shape[1], embedding_model="unverified; CLI default BAAI/bge-m3",
+        embedding_dimension=embeddings.shape[1], embedding_model=args.embedding_model,
         normalization="L2 raw embeddings; no per-feature standardization",
         topics="one global BERTopic fit across all retained tiers and dates; outlier label -1",
         min_topic_size=args.min_topic_size, min_chunks=args.min_chunks, seed=args.seed,

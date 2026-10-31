@@ -16,6 +16,7 @@ from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
+import tempfile
 
 import httpx
 
@@ -150,7 +151,7 @@ def _harvest_seed(
             return
 
 
-def harvest_phase(
+def _harvest_phase(
     client: ArchiveItClient,
     collection_id: int,
     phase: Phase,
@@ -214,7 +215,7 @@ def _phase_for_timestamp(timestamp: str, windows: list[tuple[Phase, str, str]]) 
     return None
 
 
-def harvest_all_phases(
+def _harvest_all_phases(
     client: ArchiveItClient,
     collection_id: int,
     phases: list[Phase],
@@ -224,6 +225,7 @@ def harvest_all_phases(
     max_captures_per_seed: int | None = None,
     match_type: str = "exact",
     max_captures_per_url: int = 1,
+    progress=None,
 ) -> tuple[dict[str, Path], dict[str, HarvestStats]]:
     """Walk seeds once and bucket captures into per-phase JSONL files.
 
@@ -254,6 +256,9 @@ def harvest_all_phases(
     )
 
     handles = {name: path.open("w", encoding="utf-8") for name, path in paths.items()}
+    completed = 0
+    if progress:
+        progress(0, max_seeds)
     try:
         for seed in _select_seeds(client, collection_id, include_inactive, max_seeds):
             for s in stats_by_phase.values():
@@ -299,6 +304,10 @@ def harvest_all_phases(
                 for s in stats_by_phase.values():
                     s.seed_errors.append((seed.id, str(e)))
                 continue
+            finally:
+                completed += 1
+                if progress:
+                    progress(completed, max_seeds)
             for name, stats in stats_by_phase.items():
                 if stats.captures_kept > kept_before[name]:
                     stats.seeds_with_captures += 1
@@ -311,6 +320,42 @@ def harvest_all_phases(
         {n: s.as_dict() for n, s in stats_by_phase.items()},
     )
     return paths, stats_by_phase
+
+
+def _check_coverage(stats: HarvestStats, max_seed_error_fraction: float):
+    if not 0 <= max_seed_error_fraction <= 1:
+        raise ValueError("max_seed_error_fraction must be between 0 and 1")
+    fraction = len(stats.seed_errors) / max(1, stats.seeds_visited)
+    if fraction > max_seed_error_fraction:
+        raise RuntimeError(f"Harvest rejected: {len(stats.seed_errors)}/{stats.seeds_visited} seeds failed "
+                           f"(allowed fraction {max_seed_error_fraction})")
+
+
+def harvest_phase(client, collection_id, phase, output_path=None, *, max_seed_error_fraction=0., **options):
+    """Fetch into staging and preserve previous captures if collection fails."""
+    output = output_path or RAW_DIR / "captures" / str(collection_id) / f"{phase.name}.jsonl"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".harvest-", dir=output.parent) as temporary:
+        staged, stats = _harvest_phase(client, collection_id, phase,
+                                       output_path=Path(temporary) / output.name, **options)
+        _check_coverage(stats, max_seed_error_fraction)
+        staged.replace(output)
+    return output, stats
+
+
+def harvest_all_phases(client, collection_id, phases, output_dir=None, *, max_seed_error_fraction=0., **options):
+    """Validate all windows before publishing any; DAG artifacts commit as a directory."""
+    output = output_dir or RAW_DIR / "captures" / str(collection_id)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".harvest-", dir=output.parent) as temporary:
+        paths, stats = _harvest_all_phases(client, collection_id, phases, output_dir=Path(temporary), **options)
+        for value in stats.values():
+            _check_coverage(value, max_seed_error_fraction)
+        output.mkdir(parents=True, exist_ok=True)
+        for name, path in paths.items():
+            path.replace(output / path.name)
+        paths = {name: output / path.name for name, path in paths.items()}
+    return paths, stats
 
 
 def load_jsonl(path: Path) -> Iterable[CaptureRecord]:
