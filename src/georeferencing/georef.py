@@ -90,8 +90,7 @@ def georef_phase(
 
     if output_path is None:
         cid = docs[0].collection_id
-        phase = docs[0].phase
-        output_path = PROCESSED_DIR / "georef" / str(cid) / f"{phase}.jsonl"
+        output_path = PROCESSED_DIR / "georef" / str(cid) / "documents.jsonl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     progress_path = output_path.with_suffix(output_path.suffix + ".progress")
     state_path = output_path.with_suffix(output_path.suffix + ".progress.json")

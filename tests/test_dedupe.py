@@ -133,11 +133,11 @@ def test_collection_run_overwrites_empty_phases_and_preserves_audit_backup(tmp_p
     (output / "P1_first_wave.jsonl").write_text("legacy data\n")
     summary = module.dedupe_collection(source, output)
     assert summary["retained_documents"] == 1
-    assert (output / "P2_pre_vaccine.jsonl").read_text() == ""
+    assert not (output / "P2_pre_vaccine.jsonl").exists()
     assert not (output / "P1_first_wave.jsonl").exists()
     assert (Path(summary["backup"]) / "P2_pre_vaccine.jsonl").read_text() == "stale data\n"
     assert len((output / "audit/duplicates.jsonl").read_text().splitlines()) == 2
     from config import PHASES_BY_NAME
-    assert len(list(output.glob("*.jsonl"))) == len(PHASES_BY_NAME) + 2  # phases + outside/undated, excluding audit
+    assert [p.name for p in output.glob("*.jsonl")] == ["documents.jsonl"]
     again = module.dedupe_collection(source, output)
     assert again["retained_documents"] == summary["retained_documents"]

@@ -1,7 +1,7 @@
-"""Deduplicate a collection across phase files, preserving sources and months.
+"""Deduplicate a collection across the collection, preserving sources and months.
 
 Usage: uv run python scripts/_dedupe.py <collection_id> [--max-docs N]
-Outputs phase JSONL files plus duplicate provenance and a summary. Existing
+Outputs documents.jsonl plus duplicate provenance and a summary. Existing
 outputs are backed up before replacement; normalized inputs are never modified.
 """
 from __future__ import annotations

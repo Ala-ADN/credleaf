@@ -29,7 +29,7 @@ def import_corpus(root, python, params):
             for name in required_files(stage, cid, config):
                 source = root / "data" / ("raw" if stage == "harvest" else "processed") / name
                 if not source.is_file():
-                    raise ValueError(f"Legacy import requires {source}; complete the legacy phase partitions first")
+                    raise ValueError(f"Legacy import requires {source}; run scripts/migrate_corpus.py first")
                 files[name] = source
             hashes = {name: file_hash(path) for name, path in files.items()}
             def copy(output):

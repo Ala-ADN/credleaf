@@ -40,7 +40,7 @@ def fixture_outputs(output, stage, cid, config, rows=None):
         path = output / name
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.suffix == ".jsonl":
-            values = rows if rows and path.stem == "P1_global_onset" else []
+            values = rows if rows and path.name == "documents.jsonl" else []
             path.write_text("".join(json.dumps(row) + "\n" for row in values))
         elif path.suffix == ".json":
             write_json(path, dict(low=["example.org"], authoritative=["who.int"], mixed=[])

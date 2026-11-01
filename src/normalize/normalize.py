@@ -22,7 +22,8 @@ from .extract import (
     save_cached_html,
 )
 from .models import FetchStatus, NormalizedDoc
-from .phases import load_phase_records, write_phase_partitions
+from .corpus import write_collection
+from corpus_storage import CAPTURES, DOCUMENTS, collection_files, load_records, write_records
 
 log = logging.getLogger(__name__)
 
@@ -143,10 +144,7 @@ def normalize_phase(
 
     if output_path is None:
         cid = records[0].collection_id
-        phase = records[0].phase
-        # A single harvest batch can contain several publication phases. The
-        # collection driver below publishes the final event-phase partitions.
-        output_path = PROCESSED_DIR / "normalized_batches" / str(cid) / f"{phase}.jsonl"
+        output_path = PROCESSED_DIR / "normalized_batches" / str(cid) / DOCUMENTS
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     stats = NormalizeStats()
@@ -182,51 +180,39 @@ def load_normalized(path: Path) -> list[NormalizedDoc]:
 
 
 def normalize_collection(
-    client: ArchiveItClient, collection_id: int, capture_phases: list[str], *,
+    client: ArchiveItClient, collection_id: int, capture_phases: list[str] | None = None, *,
     raw_root: Path = RAW_DIR / "captures", output_root: Path = PROCESSED_DIR / "normalized",
     cache_root: Path = CACHE_DIR, use_cache: bool = True, max_docs: int | None = None, progress=None,
 ) -> tuple[Path, dict]:
-    """Normalize requested capture windows, then publish sorted event phases.
+    """Normalize a collection; optional capture-window filters are independent of storage.
 
-    Updating one capture window preserves records from the other windows even
-    when they share a publication-phase output file. ``all`` replaces the full
-    corpus. Raw capture partitions always retain their original meaning.
+    Partial updates preserve observations outside the selected capture dates.
+    Document caps apply once across the selected collection, never per phase.
     """
-    if not capture_phases or any(phase not in PHASES_BY_NAME for phase in capture_phases):
+    if capture_phases is not None and (not capture_phases or any(phase not in PHASES_BY_NAME for phase in capture_phases)):
         raise ValueError("Select at least one configured capture phase")
     if max_docs is not None and max_docs < 1:
         raise ValueError("max_docs must be positive")
-    paths = [raw_root / str(collection_id) / f"{phase}.jsonl" for phase in capture_phases]
-    for path in paths:
-        if not path.is_file():
-            raise FileNotFoundError(f"Missing harvest file: {path}")
+    raw = raw_root / str(collection_id)
+    if not collection_files(raw, CAPTURES):
+        raise FileNotFoundError(f"Missing harvest data: {raw}")
+    selected = set(capture_phases) if capture_phases is not None else None
+    def capture_phase(record):
+        timestamp = (record.get("capture") or {}).get("timestamp") or record.get("capture_timestamp")
+        return (phase_for_date(parse_timestamp(timestamp, capture=True))
+                or record.get("capture_phase") or record.get("phase"))
+    captures = [r for r in load_records(raw, CAPTURES) if selected is None or capture_phase(r) in selected]
     output = output_root / str(collection_id)
-    selected = set(capture_phases)
-    records = []
-    if selected != set(PHASES_BY_NAME):
-        for record in load_phase_records(output):
-            actual_capture_phase = phase_for_date(parse_timestamp(record.get("capture_timestamp"), capture=True))
-            if (actual_capture_phase or record.get("capture_phase") or record.get("phase")) not in selected:
-                records.append(record)
-    statistics = {}
-    completed = 0
-    total = 0
-    if progress:
-        for path in paths:
-            with path.open(encoding="utf-8") as source:
-                count = sum(bool(line.strip()) for line in source)
-            total += min(count, max_docs) if max_docs is not None else count
-        progress(0, total)
+    records = ([r for r in load_records(output) if capture_phase(r) not in selected]
+               if selected is not None and selected != set(PHASES_BY_NAME) else [])
     with tempfile.TemporaryDirectory(prefix="credleaf-normalize-") as temporary:
-        for path in paths:
-            batch, stats = normalize_phase(client, path, output_path=Path(temporary) / path.name,
-                                            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs,
-                                            progress=(lambda done, _: progress(completed + done, total)) if progress else None)
-            completed += stats.total
-            statistics[path.stem] = stats.as_dict()
-            if batch.is_file():
-                with batch.open(encoding="utf-8") as source:
-                    records.extend(json.loads(line) for line in source if line.strip())
-    summary = write_phase_partitions(records, output)
-    summary["normalization"] = statistics
+        source = Path(temporary) / CAPTURES
+        write_records(source, captures)
+        batch, stats = normalize_phase(client, source, output_path=Path(temporary) / DOCUMENTS,
+            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs, progress=progress)
+        if batch.is_file():
+            with batch.open(encoding="utf-8") as stream:
+                records.extend(json.loads(line) for line in stream if line.strip())
+    summary = write_collection(records, output)
+    summary["normalization"] = {"collection": stats.as_dict()}
     return output, summary

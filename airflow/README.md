@@ -30,6 +30,11 @@ docker compose logs -f airflow
 ```
 
 Open http://localhost:8080 and use the standalone credentials printed in the logs.
+
+```
+docker compose exec -T airflow python -c 'import json; print(json.load(open("/opt/airflow/simple_auth_manager_passwords.json.generated"))["admin"])'
+```
+
 Enable the two DAGs. Trigger the build DAG, then copy the ID from the
 `publish_corpus` return-value XCom into the analysis DAG's `snapshot_id` field.
 The build's finalized `overview.json` also contains this ID.
@@ -47,13 +52,22 @@ The deployment uses standalone Airflow and SQLite for local development. The
 healthcheck checks API availability. Distributed deployment needs separately
 managed Airflow services/database and storage visible at the same paths to workers.
 
-| Container path | Persistence |
-| --- | --- |
-| `/opt/airflow` | Named `airflow_state` volume: Airflow database, credentials and service logs |
-| `/opt/credleaf/data` | Host `./data`: legacy data, immutable artifacts, per-run reports/code copies, shared caches |
-| `/opt/credleaf/{src,scripts,dags}` | Read-only development mounts; workers execute a frozen copy made when a run is planned |
-| `/opt/credleaf/notebooks` | Host notebook files and legacy display labels (not automatically applied to new graphs) |
-| `/opt/credleaf-venv` | Image's isolated project environment; rebuild after dependency changes |
+Standalone Airflow keeps its scheduler, DAG processor, triggerer and API running
+even when no DAG is active. This local Compose setup limits Airflow to eight
+workers, reparses DAG files at most every two minutes, suppresses routine DAG
+processor polling logs, and rotates the container's stdout logs at 10 MB × three
+files. Task INFO logs remain available. The API healthcheck runs every minute.
+If you do not need the UI or automatic scheduling, `docker compose stop airflow`
+stops its idle CPU use; `docker compose up -d airflow` starts it again. A local
+ignored `.env` can hold `AIRFLOW_UID` and `CREDLEAF_ARCHIVE_SLOTS` across shells.
+
+| Container path                     | Persistence                                                                                 |
+| ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `/opt/airflow`                     | Named `airflow_state` volume: Airflow database, credentials and service logs                |
+| `/opt/credleaf/data`               | Host `./data`: legacy data, immutable artifacts, per-run reports/code copies, shared caches |
+| `/opt/credleaf/{src,scripts,dags}` | Read-only development mounts; workers execute a frozen copy made when a run is planned      |
+| `/opt/credleaf/notebooks`          | Host notebook files and legacy display labels (not automatically applied to new graphs)     |
+| `/opt/credleaf-venv`               | Image's isolated project environment; rebuild after dependency changes                      |
 
 `AIRFLOW_UID` matches container writes to your host account. Keep it exported for
 `docker compose run`, or add it to your existing `.env`. `AIRFLOW_PORT` changes
@@ -128,19 +142,19 @@ original snapshot, including any sampling limits/capture window used above:
 All trigger settings use JSON Schema validation; the planner additionally checks
 cross-stage dependencies and scope. Document/seed caps affect only the new artifact.
 
-| Stage / scope | Controls | Artifact files and diagnostics |
-| --- | --- | --- |
-| Corpus scope | `collection_ids`, `capture_phase`, `base_snapshot_id` | Exactly the selected collections/capture windows; no implicit merge with legacy files |
-| Harvest | `harvest_max_seeds`, `harvest_max_captures_per_seed`, `harvest_max_captures_per_url`, `harvest_match_type`, `harvest_active_only`, `harvest_timeout`, `harvest_max_seed_error_fraction` | `captures/{cid}/{phase}.jsonl`; capture/seed/error counts |
-| Normalize | `normalize_max_docs`, `normalize_use_cache`, `normalize_timeout`, `normalize_min_ok`, `normalize_max_error_fraction` | `normalized/{cid}/*.jsonl`, `phase_summary.json`; event phases, extraction and date-source coverage |
-| Dedupe | `dedupe_max_docs`, `dedupe_threshold` | `deduped/{cid}/*.jsonl`, duplicate provenance audit and summary |
-| Credibility | `credibility_max_seeds`, `credibility_timeout`, `credibility_min_seed_domains` | `credibility.json`; low/mixed/authoritative counts. Registry builds retain all configured registry collections |
-| Geography | `georef_max_docs`, `georef_model`, `georef_device`, `georef_max_error_fraction` | `georef/{cid}/*.jsonl`; NER/mention coverage, pinned gazetteer hash. Artifact builds start fresh; retries cannot append into published geography |
-| Embedding | `qdrant_url`, `qdrant_prefix`, `embed_model`, `embed_batch_size` | Exclusive Qdrant collection, `qdrant.json`, offline `input/metadata.jsonl` + `input/embeddings.npy`; count/dimension/finite-vector checks |
-| Analysis scope | `snapshot_id`, `base_analysis_id`, `analysis_collection_ids`, `language`, `min_words` | Collection subset must belong to the snapshot; null selects all snapshot collections, including 4887 when present |
-| Semantic | `semantic_min_topic_size`, `semantic_min_chunks`, `semantic_seed` | Global topics/chunk assignments, normalized vectors, monthly/phase metrics, neighbours, GIF/PNG/CSV and metadata |
-| Monthly topics | `topic_min_docs`, `topic_min_topic_size`, `topic_threshold`, `topic_seed` | `chunk_provenance.jsonl`, `topics/{nodes,edges,membership,coverage}.jsonl`, matrices, vocabulary and metadata |
-| Animation | `animation_max_topics`, `animation_threshold`, `animation_labels` | `semantic_evolution.{gif,png,csv,json}` plus the pinned display labels |
+| Stage / scope  | Controls                                                                                                                                                                                | Artifact files and diagnostics                                                                                                                           |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Corpus scope   | `collection_ids`, `capture_phase`, `base_snapshot_id`                                                                                                                                   | Exactly the selected collections/capture windows; no implicit merge with legacy files                                                                    |
+| Harvest        | `harvest_max_seeds`, `harvest_max_captures_per_seed`, `harvest_max_captures_per_url`, `harvest_match_type`, `harvest_active_only`, `harvest_timeout`, `harvest_max_seed_error_fraction` | `captures/{cid}/captures.jsonl`; capture/seed/error counts                                                                                               |
+| Normalize      | `normalize_max_docs`, `normalize_use_cache`, `normalize_timeout`, `normalize_min_ok`, `normalize_max_error_fraction`                                                                    | `normalized/{cid}/documents.jsonl`, `collection_summary.json`; event phases, extraction and date-source coverage                                         |
+| Dedupe         | `dedupe_max_docs`, `dedupe_threshold`                                                                                                                                                   | `deduped/{cid}/documents.jsonl`, duplicate provenance audit and summary                                                                                  |
+| Credibility    | `credibility_max_seeds`, `credibility_timeout`, `credibility_min_seed_domains`                                                                                                          | `credibility.json`; low/mixed/authoritative counts. Registry builds retain all configured registry collections                                           |
+| Geography      | `georef_max_docs`, `georef_model`, `georef_device`, `georef_max_error_fraction`                                                                                                         | `georef/{cid}/documents.jsonl`; NER/mention coverage, pinned gazetteer hash. Artifact builds start fresh; retries cannot append into published geography |
+| Embedding      | `qdrant_url`, `qdrant_prefix`, `embed_model`, `embed_batch_size`                                                                                                                        | Exclusive Qdrant collection, `qdrant.json`, offline `input/metadata.jsonl` + `input/embeddings.npy`; count/dimension/finite-vector checks                |
+| Analysis scope | `snapshot_id`, `base_analysis_id`, `analysis_collection_ids`, `language`, `min_words`                                                                                                   | Collection subset must belong to the snapshot; null selects all snapshot collections, including 4887 when present                                        |
+| Semantic       | `semantic_min_topic_size`, `semantic_min_chunks`, `semantic_seed`                                                                                                                       | Global topics/chunk assignments, normalized vectors, monthly/phase metrics, neighbours, GIF/PNG/CSV and metadata                                         |
+| Monthly topics | `topic_min_docs`, `topic_min_topic_size`, `topic_threshold`, `topic_seed`                                                                                                               | `chunk_provenance.jsonl`, `topics/{nodes,edges,membership,coverage}.jsonl`, matrices, vocabulary and metadata                                            |
+| Animation      | `animation_max_topics`, `animation_threshold`, `animation_labels`                                                                                                                       | `semantic_evolution.{gif,png,csv,json}` plus the pinned display labels                                                                                   |
 
 Semantic analysis defaults to build; monthly topics and their animation default
 to off. Set both `topic_mode=build` and `animation_mode=build` for a complete
@@ -159,8 +173,9 @@ rendered metadata distinguishes automatic names from explicit overrides.
 Zero seed-error tolerance, zero fetch/extraction-error tolerance and zero NER-error
 tolerance are the defaults. These are configurable quality gates, alongside the
 minimum successfully extracted document/domain counts. Failed gates prevent
-publication. Empty/outside-study/undated partitions remain explicit; embedding
-and geography consume all configured study event phases within this snapshot.
+publication. Outside-study and undated records remain in collection files; analysis selects
+the study population using document dates. Embedding and geography consume the
+collection file. Document caps apply once per collection.
 
 Qdrant names include the artifact key and an attempt-specific suffix. Builds never
 upsert into a previously published collection. A normal failed build removes only
@@ -181,8 +196,8 @@ docker compose run --rm airflow bash -c \
 ```
 
 The importer copies raw, normalized, deduped and registry files into checksummed
-artifacts and prints a published snapshot ID. It requires all configured raw/event
-phase files, normalization/dedupe summaries and the duplicate audit. It excludes
+artifacts and prints a published snapshot ID. Run `scripts/migrate_corpus.py` first for phase-partitioned data. The importer
+requires canonical collection files, normalization/dedupe summaries and the duplicate audit. It excludes
 legacy geography and Qdrant collections, whose cache/model history cannot be
 certified. Build new embeddings/geography from the imported deduped data using
 reuse modes for the core stages.
@@ -204,7 +219,7 @@ steps use comparable successful historical durations, or an optional initial
 estimate supplied in the trigger configuration:
 
 ```json
-{"eta_stage_seconds": {"harvest": 1800, "normalize": 7200, "dedupe": 300}}
+{ "eta_stage_seconds": { "harvest": 1800, "normalize": 7200, "dedupe": 300 } }
 ```
 
 These are **user-supplied example whole-task durations**, not benchmarks. For a

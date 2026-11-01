@@ -11,7 +11,7 @@ import logging
 import sys
 from pathlib import Path
 
-from config import COVID_COLLECTIONS, PHASES_BY_NAME, PROCESSED_DIR
+from config import COVID_COLLECTIONS, PROCESSED_DIR
 from normalize.extract import detect_language
 
 
@@ -90,8 +90,7 @@ def main() -> int:
         logger.info(f"\nProcessing collection {collection_id}...")
         
         # Iterate through phases
-        for phase_name in PHASES_BY_NAME:
-            jsonl_path = collection_dir / f"{phase_name}.jsonl"
+        for jsonl_path in [collection_dir / "documents.jsonl"]:
             
             if jsonl_path.exists():
                 docs, amended = amend_languages_in_file(jsonl_path)

@@ -3,13 +3,13 @@
 Requires a running Qdrant instance (local or remote).
 
 Usage:
-    uv run python scripts/run_embed.py <collection_id> <[phase_name|all]> [--qdrant-url URL] [--model MODEL] [--batch-size N]
+    uv run python scripts/run_embed.py <collection_id> [all] [--qdrant-url URL] [--model MODEL] [--batch-size N]
 
 Qdrant Setup (quick start):
     docker run -p 6333:6333 qdrant/qdrant
 
 Examples:
-    uv run python scripts/run_embed.py 13559 P0_outbreak
+    uv run python scripts/run_embed.py 13559
     uv run python scripts/run_embed.py 4887 all --qdrant-url http://localhost:6333
     uv run python scripts/run_embed.py 13559 all --model bge-m3
     uv run python scripts/run_embed.py 13559 all --batch-size 512
@@ -21,7 +21,7 @@ import json
 import logging
 import sys
 
-from config import PROCESSED_DIR, PHASES_BY_NAME, COVID_COLLECTIONS
+from config import PROCESSED_DIR, COVID_COLLECTIONS
 from embed import embed_to_qdrant
 
 
@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
         description="Embed normalized documents into Qdrant using semantic chunking."
     )
     p.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
-    p.add_argument("phase_name", choices=list(PHASES_BY_NAME) + ["all"])
+    p.add_argument("phase_name", nargs="?", default="all", choices=["all"], help="Optional legacy all argument; the entire collection is embedded")
     p.add_argument(
         "--qdrant-url",
         type=str,
@@ -63,15 +63,6 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    # Handle "all" phases recursively
-    if args.phase_name == "all":
-        for phase_name in PHASES_BY_NAME:
-            print(f"\n=== Embedding phase {phase_name} ===")
-            sys.argv[2] = phase_name
-            if main() != 0:
-                return 1
-        return 0
-
     # Check Qdrant connection
     try:
         import httpx
@@ -87,7 +78,7 @@ def main() -> int:
 
     # Load deduped JSONL
     deduped_path = (
-        PROCESSED_DIR / "deduped" / str(args.collection_id) / f"{args.phase_name}.jsonl"
+        PROCESSED_DIR / "deduped" / str(args.collection_id) / "documents.jsonl"
     )
     if not deduped_path.exists():
         print(

@@ -10,7 +10,7 @@ import re
 import tempfile
 
 from pipeline.inventory import describe
-from pipeline.spec import required_files
+from pipeline.spec import required_files, legacy_required_files
 
 
 def digest(value):
@@ -85,7 +85,11 @@ class ArtifactStore:
         if isinstance(reference, dict) and any(reference[key] != manifest[key] for key in ("stage", "collection_id")):
             raise ValueError("Artifact reference scope differs from its manifest")
         names = [item["path"] for item in manifest["files"]]
-        if len(set(names)) != len(names) or not set(required_files(manifest["stage"], manifest["collection_id"], manifest["config"])) <= set(names):
+        requirements = required_files
+        if not manifest["config"].get("corpus_layout") and any(
+                Path(name).stem.startswith("P") for name in names):
+            requirements = legacy_required_files
+        if len(set(names)) != len(names) or not set(requirements(manifest["stage"], manifest["collection_id"], manifest["config"])) <= set(names):
             raise ValueError("Incomplete artifact inventory")
         for item in manifest["files"]:
             file = directory / "files" / item["path"]

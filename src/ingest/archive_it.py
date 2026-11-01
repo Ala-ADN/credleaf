@@ -110,24 +110,53 @@ class ArchiveItClient:
         collapse: CDX `collapse=` field (e.g. 'digest' to drop adjacent
         same-digest rows server-side, 'timestamp:10' for one row per hour).
         """
+        # Archive-It's range matcher currently returns empty 200 responses for
+        # prefix/host/domain queries with from/to, even for known captures.
+        # Keep the requested URL scope and apply dates to the streamed rows.
+        local_window = match_type != "exact" and bool(from_ts or to_ts)
         params: dict[str, Any] = {"url": url, "matchType": match_type}
-        if from_ts:
+        if from_ts and not local_window:
             params["from"] = from_ts
-        if to_ts:
+        if to_ts and not local_window:
             params["to"] = to_ts
-        if limit is not None:
+        if limit is not None and not local_window:
             params["limit"] = limit
+        if collapse and local_window:
+            raise ValueError("Server-side collapse cannot precede local date filtering")
         if collapse:
             params["collapse"] = collapse
 
-        with self._client.stream(
-            "GET", f"{WAYBACK_BASE}/{collection_id}/timemap/cdx", params=params
-        ) as r:
-            r.raise_for_status()
-            for line in r.iter_lines():
-                if not line.strip():
-                    continue
-                yield self._parse_cdx_row(line)
+        emitted = 0
+        for attempt in range(4):
+            try:
+                with self._client.stream(
+                    "GET", f"{WAYBACK_BASE}/{collection_id}/timemap/cdx", params=params
+                ) as r:
+                    r.raise_for_status()
+                    for line in r.iter_lines():
+                        if not line.strip():
+                            continue
+                        capture = self._parse_cdx_row(line)
+                        if from_ts and capture.timestamp < from_ts.ljust(14, "0"):
+                            continue
+                        if to_ts and capture.timestamp > to_ts.ljust(14, "9"):
+                            continue
+                        emitted += 1
+                        yield capture
+                        if limit is not None and emitted >= limit:
+                            return
+                return
+            except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+                retryable = (isinstance(exc, httpx.TransportError)
+                             or exc.response.status_code == 429
+                             or exc.response.status_code >= 500)
+                # Once rows have escaped, report a partial seed rather than
+                # silently replaying its output on a retry.
+                if not retryable or emitted or attempt == 3:
+                    raise
+                delay = 2 ** attempt
+                log.warning("CDX request failed (%s); retrying in %ss", exc, delay)
+                time.sleep(delay)
 
     @staticmethod
     def _parse_cdx_row(line: str) -> Capture:

@@ -180,7 +180,8 @@ def test_notebook_refreshes_cached_document_and_mention_tiers(tmp_path) -> None:
     doc = dict(article_id="1:2:20200311000000", phase="P1_global_onset", seed_url="https://www.nhs.uk/",
                credibility_tier="mixed", event_date="2020-03-11", event_week="2020-W11",
                event_date_source="publish", mentions=[mention])
-    cached_path = georef / "sample.jsonl"
+    (georef / "13559").mkdir()
+    cached_path = georef / "13559/documents.jsonl"
     cached_path.write_text(json.dumps(doc) + "\n")
     original = cached_path.read_bytes()
     CredibilityRegistry(mixed={"nhs.uk"}).save(tmp_path / "credibility.json")

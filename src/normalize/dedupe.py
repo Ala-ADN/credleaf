@@ -116,7 +116,7 @@ class DedupeResult:
 
 
 def deduplicate_documents(records: list[dict], *, threshold=THRESHOLD) -> DedupeResult:
-    """Deduplicate one collection's captures across all supplied phase files.
+    """Deduplicate all supplied observations in a collection.
 
     Input entries contain ``doc`` plus stable ``origin`` (file:line). Successful
     documents only are compared. Output ordering follows input order, while

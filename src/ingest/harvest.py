@@ -1,7 +1,7 @@
 """Phase-windowed harvest: enumerate seeds, query CDX per phase, dedupe, write JSONL.
 
-Output: one JSONL file per (collection, phase) at
-    {RAW_DIR}/captures/{collection_id}/{phase_name}.jsonl
+Output: one JSONL file per collection at
+    {RAW_DIR}/captures/{collection_id}/captures.jsonl
 
 Each line is a serialized `CaptureRecord` (capture + seed + collection context).
 Revisits and duplicate page/digest captures are dropped. By default each
@@ -172,7 +172,7 @@ def _harvest_phase(
     """
     _validate_limits(max_seeds, max_captures_per_seed, max_captures_per_url)
     if output_path is None:
-        output_path = RAW_DIR / "captures" / str(collection_id) / f"{phase.name}.jsonl"
+        output_path = RAW_DIR / "captures" / str(collection_id) / "captures.jsonl"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     stats = HarvestStats()
@@ -227,7 +227,7 @@ def _harvest_all_phases(
     max_captures_per_url: int = 1,
     progress=None,
 ) -> tuple[dict[str, Path], dict[str, HarvestStats]]:
-    """Walk seeds once and bucket captures into per-phase JSONL files.
+    """Walk seeds once and write one collection JSONL file.
 
     Equivalent to running `harvest_phase` once per phase, but issues a single
     CDX query per seed spanning the union of all phase windows — saving the
@@ -245,7 +245,7 @@ def _harvest_all_phases(
     union_from = min(w[1] for w in windows)
     union_to = max(w[2] for w in windows)
 
-    paths: dict[str, Path] = {p.name: output_dir / f"{p.name}.jsonl" for p in phases}
+    paths: dict[str, Path] = {p.name: output_dir / "captures.jsonl" for p in phases}
     stats_by_phase: dict[str, HarvestStats] = {p.name: HarvestStats() for p in phases}
     seen_by_phase: dict[str, set[tuple[str, str]]] = {p.name: set() for p in phases}
     urls_by_phase = {p.name: Counter() for p in phases}
@@ -255,7 +255,7 @@ def _harvest_all_phases(
         collection_id, len(phases), match_type, union_from, union_to, output_dir,
     )
 
-    handles = {name: path.open("w", encoding="utf-8") for name, path in paths.items()}
+    handle = (output_dir / "captures.jsonl").open("w", encoding="utf-8")
     completed = 0
     if progress:
         progress(0, max_seeds)
@@ -296,7 +296,7 @@ def _harvest_all_phases(
                         phase=phase.name,
                         capture=cap,
                     )
-                    handles[phase.name].write(record.model_dump_json() + "\n")
+                    handle.write(record.model_dump_json() + "\n")
                     stats.captures_kept += 1
                     yielded_for_seed[phase.name] += 1
             except httpx.HTTPError as e:
@@ -312,8 +312,7 @@ def _harvest_all_phases(
                 if stats.captures_kept > kept_before[name]:
                     stats.seeds_with_captures += 1
     finally:
-        for fh in handles.values():
-            fh.close()
+        handle.close()
 
     log.info(
         "harvest done (multi-phase): %s",
@@ -332,8 +331,12 @@ def _check_coverage(stats: HarvestStats, max_seed_error_fraction: float):
 
 
 def harvest_phase(client, collection_id, phase, output_path=None, *, max_seed_error_fraction=0., **options):
-    """Fetch into staging and preserve previous captures if collection fails."""
-    output = output_path or RAW_DIR / "captures" / str(collection_id) / f"{phase.name}.jsonl"
+    """Harvest a window, preserving other windows in canonical collection storage."""
+    if output_path is None:
+        paths, stats = harvest_all_phases(client, collection_id, [phase],
+            max_seed_error_fraction=max_seed_error_fraction, **options)
+        return paths[phase.name], stats[phase.name]
+    output = output_path
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".harvest-", dir=output.parent) as temporary:
         staged, stats = _harvest_phase(client, collection_id, phase,
@@ -344,18 +347,35 @@ def harvest_phase(client, collection_id, phase, output_path=None, *, max_seed_er
 
 
 def harvest_all_phases(client, collection_id, phases, output_dir=None, *, max_seed_error_fraction=0., **options):
-    """Validate all windows before publishing any; DAG artifacts commit as a directory."""
+    """Validate query windows, then atomically publish one capture file.
+
+    Window labels control sampling and provenance only. Unselected windows in
+    an existing collection are preserved; a full-study harvest replaces it.
+    """
+    from corpus_storage import CAPTURES, load_records, write_records, backup_directory, remove_legacy
+    from config import PHASES_BY_NAME
     output = output_dir or RAW_DIR / "captures" / str(collection_id)
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".harvest-", dir=output.parent) as temporary:
         paths, stats = _harvest_all_phases(client, collection_id, phases, output_dir=Path(temporary), **options)
         for value in stats.values():
             _check_coverage(value, max_seed_error_fraction)
-        output.mkdir(parents=True, exist_ok=True)
-        for name, path in paths.items():
-            path.replace(output / path.name)
-        paths = {name: output / path.name for name, path in paths.items()}
-    return paths, stats
+        selected = {p.name for p in phases}
+        from document_time import parse_timestamp
+        def in_selected_window(row):
+            timestamp = parse_timestamp(row["capture"]["timestamp"], capture=True)
+            day = timestamp.date().isoformat() if timestamp else None
+            return (any(p.start <= day <= p.end for p in phases) if day else row.get("phase") in selected)
+        preserved = ([] if selected == set(PHASES_BY_NAME) else
+                     [row for row in load_records(output, CAPTURES) if not in_selected_window(row)])
+        rows = preserved
+        for path in set(paths.values()):
+            with path.open(encoding="utf-8") as source:
+                rows.extend(json.loads(line) for line in source if line.strip())
+        backup_directory(output)
+        write_records(output / CAPTURES, rows)
+        remove_legacy(output)
+    return {p.name: output / CAPTURES for p in phases}, stats
 
 
 def load_jsonl(path: Path) -> Iterable[CaptureRecord]:

@@ -9,6 +9,15 @@ services:
     environment:
       CREDLEAF_QDRANT_URL: http://qdrant:6333
       CREDLEAF_ARCHIVE_SLOTS: "${CREDLEAF_ARCHIVE_SLOTS:-2}"
+      AIRFLOW__CORE__PARALLELISM: "8"
+      AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL: "120"
+      AIRFLOW__DAG_PROCESSOR__PRINT_STATS_INTERVAL: "0"
+      AIRFLOW__LOGGING__LOGGING_CONFIG_CLASS: pipeline.airflow_logging.LOGGING_CONFIG
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:${AIRFLOW_PORT:-8080}:8080"
     volumes:
@@ -27,7 +36,7 @@ services:
         - python
         - -c
         - "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v2/monitor/health', timeout=5)"
-      interval: 30s
+      interval: 60s
       timeout: 10s
       start_period: 120s
       retries: 5

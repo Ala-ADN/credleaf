@@ -87,12 +87,12 @@ settings table and examples of rerunning downstream steps from existing data.
 
 | Stage             | Where                                                        | Output                                               |
 | ----------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
-| Harvest           | [scripts/harvest.py](scripts/harvest.py)                     | `data/raw/captures/{cid}/{phase}.jsonl`              |
-| Normalize         | [scripts/run_normalize.py](scripts/run_normalize.py)         | `data/processed/normalized/{cid}/{phase}.jsonl`      |
-| Deduplicate       | [scripts/\_dedupe.py](scripts/_dedupe.py)                    | `data/processed/deduped/{cid}/{phase}.jsonl` + audit |
+| Harvest           | [scripts/harvest.py](scripts/harvest.py)                     | `data/raw/captures/{cid}/captures.jsonl`              |
+| Normalize         | [scripts/run_normalize.py](scripts/run_normalize.py)         | `data/processed/normalized/{cid}/documents.jsonl`      |
+| Deduplicate       | [scripts/\_dedupe.py](scripts/_dedupe.py)                    | `data/processed/deduped/{cid}/documents.jsonl` + audit |
 | Credibility       | [scripts/build_credibility.py](scripts/build_credibility.py) | `data/processed/credibility.json`                    |
 | Embed             | [scripts/run_embed.py](scripts/run_embed.py)                 | Shared `credleaf` Qdrant collection                  |
-| **Georeference**  | [scripts/georef.py](scripts/georef.py)                       | `data/processed/georef/{cid}/{phase}.jsonl`          |
+| **Georeference**  | [scripts/georef.py](scripts/georef.py)                       | `data/processed/georef/{cid}/documents.jsonl`          |
 | Semantic analysis | [scripts/analyze_semantics.py](scripts/analyze_semantics.py) | Metrics, topic assignments, neighbour matches + GIF  |
 
 ## The georeferencing demo
@@ -127,34 +127,33 @@ changed revisions; repeated page/digest pairs are still skipped. Equal digests
 on different URLs or in different capture phases preserve their provenance.
 Host matching can only find article paths already present in the archive.
 
-Raw harvest files use **capture windows**, since publication dates are unavailable
-until extraction. Normalized and deduped files use **publication phases**:
+Raw captures live in one `captures.jsonl` per collection. Normalization,
+deduplication, and geography each write one `documents.jsonl` per collection.
+Phase labels are derived analysis metadata; changing phase boundaries does not
+require moving documents between files. Date assignment uses a valid UTC
+`publish_date`, falling back to `capture_timestamp`. Original capture provenance
+is preserved. Outside-study and undated records remain in the collection file.
+Analysis filters them when selecting the study population.
 
-1. Use a valid `publish_date`, converted to UTC.
-2. Otherwise use `capture_timestamp`.
-3. Assign the configured phase and sort records chronologically within it.
-
-Each document retains its original `capture_phase`, selected `event_date`, and
-`event_date_source`. A valid publication date outside the study goes into
-`outside_study.jsonl`; records with neither usable date go into `undated.jsonl`.
-Those records are retained separately from the primary study phases. Updating a
-single capture window preserves other windows' records, including records sharing
-its publication-phase output file. Embeddings, semantic windows and geography
-use the same date policy.
-
-Regroup existing normalized data without refetching or extraction, then rebuild
-deduped outputs:
+Consolidate an existing phase-partitioned corpus locally, without refetching,
+extracting, embedding, or running NER:
 
 ```bash
-uv run python scripts/run_normalize.py 13559 all --rephase-only
-uv run python scripts/run_normalize.py 13529 all --rephase-only
-uv run python scripts/_dedupe.py 13559
-uv run python scripts/_dedupe.py 13529
+uv run python scripts/migrate_corpus.py
 ```
 
-Repartitioning saves dated backups outside the live data directories and records
-date-source coverage and phase counts in `phase_summary.json`. Existing Qdrant
-collections and rendered analyses require a downstream rebuild to reflect it.
+The migration verifies record counts and ordered content hashes, saves dated
+backups under `collection_backups/`, and then retires the old phase files. It is
+safe to rerun. Existing geography, embedding IDs, caches, and immutable snapshots
+are preserved. Migrated geography is readable by the notebook; to recompute it,
+use `--no-resume` because old per-phase resume states cannot certify a merged input.
+
+Refresh derived dates after editing phase definitions with
+`uv run python scripts/run_normalize.py 13559 --rephase-only`, or let analysis
+loaders derive them. `collection_summary.json` records date-source coverage and
+phase counts. Normalization and downstream document caps now apply per collection.
+Harvest windows still select archive requests and sampling budgets; they do not
+partition storage. Updating a single capture window preserves the others.
 
 ## Content deduplication
 
@@ -165,8 +164,7 @@ uv run python scripts/_dedupe.py 13559
 uv run python scripts/_dedupe.py 13529
 ```
 
-The collection is processed across all configured phase files with a shared
-index. Exact matching uses Unicode-normalized, case-insensitive content hashes;
+The entire collection file is processed with a shared index. Exact matching uses Unicode-normalized, case-insensitive content hashes;
 near matching uses MinHash candidates followed by an exact five-word-shingle
 Jaccard check against a retained representative (threshold 0.90). A dropped
 record never becomes a bridge for removing another record.
@@ -199,7 +197,7 @@ uv run python scripts/run_embed.py 13529 all --collection-name credleaf_dedup_v2
 The writer rejects legacy points in the target collection. Select the new
 collection in Notebook 03 before refitting topics and regenerating the GIF.
 The existing README GIF and numerical results below describe the earlier corpus;
-changing deduped JSONL files does not rewrite existing embeddings or analyses.
+changing deduped collection files does not rewrite existing embeddings or analyses.
 
 ## Semantic analysis
 

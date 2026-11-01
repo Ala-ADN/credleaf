@@ -48,19 +48,19 @@ CORPUS_SETTINGS = {
     "harvest_active_only": knob(False, "Harvest", "Only active seeds.", type="boolean"),
     "harvest_timeout": knob(60., "Harvest", "HTTP request timeout in seconds.", type="number", exclusiveMinimum=0),
     "harvest_max_seed_error_fraction": knob(0., "Harvest", "Maximum tolerated fraction of failed seeds before rejecting the artifact.", type="number", minimum=0, maximum=1),
-    "normalize_max_docs": knob(None, "Normalize", "Document cap per capture window, isolated to this snapshot.", **LIMIT),
+    "normalize_max_docs": knob(None, "Normalize", "Document cap per collection, isolated to this snapshot.", **LIMIT),
     "normalize_use_cache": knob(True, "Normalize", "Use shared HTML cache.", type="boolean"),
     "normalize_timeout": knob(60., "Normalize", "HTTP timeout in seconds.", type="number", exclusiveMinimum=0),
     "normalize_min_ok": knob(1, "Normalize", "Minimum successfully extracted documents per collection.", type="integer", minimum=0),
     "normalize_max_error_fraction": knob(0., "Normalize", "Maximum fraction of fetch/extraction failures.", type="number", minimum=0, maximum=1),
-    "dedupe_max_docs": knob(None, "Dedupe", "Input cap per event-phase file.", **LIMIT),
+    "dedupe_max_docs": knob(None, "Dedupe", "Input cap per collection.", **LIMIT),
     "dedupe_threshold": knob(.9, "Dedupe", "Near-duplicate Jaccard threshold.", type="number", exclusiveMinimum=0, maximum=1),
     "credibility_max_seeds": knob(None, "Credibility", "Seed cap per registry collection.", **LIMIT),
     "credibility_timeout": knob(60., "Credibility", "HTTP timeout in seconds.", type="number", exclusiveMinimum=0),
     "credibility_min_seed_domains": knob(1, "Credibility", "Minimum harvested low/mixed domains in the registry.", type="integer", minimum=0),
     "embed_model": knob("BAAI/bge-m3", "Embed", "Encoder ID or immutable local model path; recorded in provenance.", type="string", minLength=1),
     "embed_batch_size": knob(256, "Embed", "Chunks per Qdrant batch.", type="integer", minimum=1),
-    "georef_max_docs": knob(None, "Georeference", "Document cap per event phase.", **LIMIT),
+    "georef_max_docs": knob(None, "Georeference", "Document cap per collection.", **LIMIT),
     "georef_model": knob("en_core_web_trf", "Georeference", "Installed spaCy model.", type="string", minLength=1),
     "georef_device": knob("cpu", "Georeference", "Model device.", type="string", enum=["cpu", "cuda"]),
     "georef_max_error_fraction": knob(0., "Georeference", "Maximum fraction of NER failures.", type="number", minimum=0, maximum=1),
@@ -113,6 +113,8 @@ def schema(kind="corpus"):
 
 def stage_config(stage, params, resources):
     config = {key: value for key, value in params.items() if key.startswith(stage + "_") and not key.endswith("_mode")}
+    if stage in {"harvest", "normalize", "dedupe", "georef", "embed"}:
+        config["corpus_layout"] = "collection-v1"
     if stage == "harvest":
         config["capture_phase"] = params["capture_phase"]
     if stage == "embed":
@@ -127,19 +129,17 @@ def stage_config(stage, params, resources):
 
 
 def required_files(stage, cid, config):
-    phases = [*PHASES_BY_NAME, "outside_study", "undated"]
     if stage == "harvest":
-        names = list(PHASES_BY_NAME) if config["capture_phase"] == "all" else [config["capture_phase"]]
-        return [f"captures/{cid}/{name}.jsonl" for name in names]
+        return [f"captures/{cid}/captures.jsonl"]
     if stage in {"normalize", "dedupe"}:
         folder = "normalized" if stage == "normalize" else "deduped"
-        summary = "phase_summary.json" if stage == "normalize" else "dedupe_summary.json"
-        files = [f"{folder}/{cid}/{name}.jsonl" for name in phases] + [f"{folder}/{cid}/{summary}"]
+        summary = "collection_summary.json" if stage == "normalize" else "dedupe_summary.json"
+        files = [f"{folder}/{cid}/documents.jsonl", f"{folder}/{cid}/{summary}"]
         return files + ([f"{folder}/{cid}/audit/duplicates.jsonl"] if stage == "dedupe" else [])
     if stage == "credibility":
         return ["credibility.json"]
     if stage == "georef":
-        return [f"georef/{cid}/{name}.jsonl" for name in PHASES_BY_NAME]
+        return [f"georef/{cid}/documents.jsonl"]
     if stage == "embed":
         return ["input/metadata.jsonl", "input/embeddings.npy", "qdrant.json"]
     if stage == "semantic":
@@ -154,3 +154,19 @@ def required_files(stage, cid, config):
     if stage == "publish":
         return ["snapshot.json"]
     raise ValueError(f"Unknown stage {stage}")
+
+
+def legacy_required_files(stage, cid, config):
+    """Verify historical snapshots without rewriting their signed manifests."""
+    phases = [*PHASES_BY_NAME, "outside_study", "undated"]
+    if stage == "harvest":
+        names = list(PHASES_BY_NAME) if config["capture_phase"] == "all" else [config["capture_phase"]]
+        return [f"captures/{cid}/{name}.jsonl" for name in names]
+    if stage in {"normalize", "dedupe"}:
+        folder = "normalized" if stage == "normalize" else "deduped"
+        summary = "phase_summary.json" if stage == "normalize" else "dedupe_summary.json"
+        return ([f"{folder}/{cid}/{name}.jsonl" for name in phases] + [f"{folder}/{cid}/{summary}"]
+                + ([f"{folder}/{cid}/audit/duplicates.jsonl"] if stage == "dedupe" else []))
+    if stage == "georef":
+        return [f"georef/{cid}/{name}.jsonl" for name in PHASES_BY_NAME]
+    return required_files(stage, cid, config)

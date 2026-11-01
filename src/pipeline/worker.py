@@ -34,13 +34,14 @@ def execute(request):
                 max_captures_per_url=c["harvest_max_captures_per_url"], match_type=c["harvest_match_type"],
                 max_seed_error_fraction=c["harvest_max_seed_error_fraction"],
                 progress=Progress(request.get("progress_path"), unit="seeds (budget upper bound)"))
+        if not sum(value.captures_kept for value in stats.values()):
+            raise ValueError("Harvest quality gate failed: zero captures retained; check CDX query scope and date coverage")
         return {key: value.as_dict() for key, value in stats.items()}
     if stage == "normalize":
         from ingest import ArchiveItClient
         from normalize import normalize_collection
 
-        raw = paths[0] / "captures" / str(cid)
-        phases = [name for name in PHASES_BY_NAME if (raw / f"{name}.jsonl").exists()]
+        phases = None  # Capture scope is carried by the input artifact, not filenames.
         with ArchiveItClient(timeout=c["normalize_timeout"]) as client:
             _, stats = normalize_collection(client, cid, phases, raw_root=paths[0] / "captures",
                 output_root=out / "normalized", cache_root=root / "data/cache",
@@ -81,14 +82,13 @@ def execute(request):
         gazetteer = Gazetteer.load_pickle(gazetteer_path)
         extractor = None
         stats = {}
-        for name in PHASES_BY_NAME:
-            source = paths[0] / "deduped" / str(cid) / f"{name}.jsonl"
-            if source.stat().st_size and extractor is None:
-                extractor = ToponymExtractor(model_name=c["georef_model"], device=c["georef_device"])
-            _, value = georef_phase(source, extractor, gazetteer, registry,
-                output_path=out / "georef" / str(cid) / source.name, resume=False,
-                max_docs=c["georef_max_docs"], resume_key=c["gazetteer_sha256"])
-            stats[name] = value.as_dict()
+        source = paths[0] / "deduped" / str(cid) / "documents.jsonl"
+        if source.stat().st_size:
+            extractor = ToponymExtractor(model_name=c["georef_model"], device=c["georef_device"])
+        _, value = georef_phase(source, extractor, gazetteer, registry,
+            output_path=out / "georef" / str(cid) / "documents.jsonl", resume=False,
+            max_docs=c["georef_max_docs"], resume_key=c["gazetteer_sha256"])
+        stats["collection"] = value.as_dict()
         failed = sum(value["ner_failed"] for value in stats.values())
         emitted = sum(value["ner_failed"] + value["ok"] + value["no_text"] + value["no_toponyms"] for value in stats.values())
         if failed / max(1, emitted) > c["georef_max_error_fraction"]:
@@ -150,10 +150,9 @@ def embed_snapshot(request, paths):
     combined = out / ".input.jsonl"
     with combined.open("w", encoding="utf-8") as target:
         for base, ref in zip(paths, request["inputs"]):
-            for phase in PHASES_BY_NAME:
-                with (base / "deduped" / str(ref["collection_id"]) / f"{phase}.jsonl").open(encoding="utf-8") as source:
-                    for line in source:
-                        target.write(line)
+            with (base / "deduped" / str(ref["collection_id"]) / "documents.jsonl").open(encoding="utf-8") as source:
+                for line in source:
+                    target.write(line)
     with QdrantClient(url=c["qdrant_url"], timeout=120) as client:
         if client.collection_exists(name):
             raise ValueError("Refusing to modify an existing Qdrant collection")

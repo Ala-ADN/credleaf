@@ -52,7 +52,7 @@ def test_url_limit_shared_across_overlapping_seeds_but_not_phases(tmp_path):
     paths, stats = harvest_all_phases(client, 13559, phases, output_dir=tmp_path)
     assert client.seed_passes == 1
     for phase in phases:
-        assert len(list(load_jsonl(paths[phase.name]))) == 1
+        assert sum(r.phase == phase.name for r in load_jsonl(paths[phase.name])) == 1
         assert stats[phase.name].captures_kept == 1
         assert stats[phase.name].captures_skipped_dup_digest == 1
 

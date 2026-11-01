@@ -6,7 +6,7 @@ the corresponding chunks in Qdrant without re-embedding.
 Uses set_payload to update only metadata, preserving all vectors.
 
 Usage:
-    uv run python scripts/_amend_embedding_metadata.py <collection_id> <[phase_name|all]> [--qdrant-url URL]
+    uv run python scripts/_amend_embedding_metadata.py <collection_id> [all] [--qdrant-url URL]
 
 Examples:
     uv run python scripts/_amend_embedding_metadata.py 13559 P0_outbreak
@@ -26,7 +26,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.conversions.common_types import PointId
 from qdrant_client.http.models import Record
 
-from config import PROCESSED_DIR, PHASES_BY_NAME, COVID_COLLECTIONS
+from config import PROCESSED_DIR, COVID_COLLECTIONS
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
         description="Update existing Qdrant chunk metadata with publish_date."
     )
     p.add_argument("collection_id", type=int, choices=list(COVID_COLLECTIONS))
-    p.add_argument("phase_name", choices=list(PHASES_BY_NAME) + ["all"])
+    p.add_argument("phase_name", nargs="?", default="all", choices=["all"])
     p.add_argument(
         "--qdrant-url",
         type=str,
@@ -267,25 +267,12 @@ def main() -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    # Handle "all" phases recursively
-    if args.phase_name == "all":
-        total_updated = 0
-        for phase_name in PHASES_BY_NAME:
-            print(f"\n{'='*60}")
-            print(f"Updating metadata for phase {phase_name}")
-            print(f"{'='*60}")
-            sys.argv[2] = phase_name
-            result = main()
-            if result != 0:
-                return result
-        return 0
-
     # Check Qdrant connection
     client = check_qdrant_connection(args.qdrant_url)
 
     # Load metadata from deduped file
     deduped_path = (
-        PROCESSED_DIR / "deduped" / str(args.collection_id) / f"{args.phase_name}.jsonl"
+        PROCESSED_DIR / "deduped" / str(args.collection_id) / "documents.jsonl"
     )
     
     log.info("Loading document metadata from %s", deduped_path)

@@ -141,14 +141,15 @@ def test_harvest_progress_counts_failed_seeds_and_keeps_budget_upper_bound(tmp_p
     assert updates == [(0, 5), (1, 5), (2, 5), (3, 5), (4, 5)]
 
 
-def test_normalization_progress_aggregates_windows_without_reset(tmp_path, monkeypatch):
+def test_normalization_progress_uses_collection_cap(tmp_path, monkeypatch):
     module = importlib.import_module("normalize.normalize")
     phases = list(PHASES_BY_NAME)[:2]
     for phase in phases:
         path = tmp_path / "raw/13559" / f"{phase}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("{}\n" * 4)
+        path.write_text((json.dumps(dict(phase=phase)) + "\n") * 4)
     def batch(client, path, output_path, progress, **kwargs):
+        assert len(path.read_text().splitlines()) == 8
         progress(0, 3)
         for i in range(1, 4):
             progress(i, 3)
@@ -157,5 +158,4 @@ def test_normalization_progress_aggregates_windows_without_reset(tmp_path, monke
     updates = []
     module.normalize_collection(None, 13559, phases, raw_root=tmp_path / "raw", output_root=tmp_path / "out",
                                 max_docs=3, progress=lambda done, total: updates.append((done, total)))
-    assert [done for done, _ in updates] == [0, 0, 1, 2, 3, 3, 4, 5, 6]
-    assert all(total == 6 for _, total in updates)
+    assert updates == [(0, 3), (1, 3), (2, 3), (3, 3)]

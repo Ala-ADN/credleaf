@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 
 from document_time import assign_document_time, document_time
-from normalize.phases import rephase_normalized, load_phase_records
+from normalize.corpus import refresh_collection_dates
+from corpus_storage import load_records
 from analysis.semantic_analysis import prepare_semantic_corpus
 from credibility.registry import CredibilityRegistry
 
@@ -38,17 +39,17 @@ def test_rephase_preserves_records_and_capture_provenance_with_backups(tmp_path)
             dict(collection_id=13559, digest="undated", phase="P5_omicron_wave", publish_date=None, capture_timestamp="bad")]
     original = "".join(json.dumps(row) + "\n" for row in rows)
     (directory / "P5_omicron_wave.jsonl").write_text(original)
-    summary = rephase_normalized(directory)
+    summary = refresh_collection_dates(directory)
     assert summary["documents"] == 5
     assert (Path(summary["backup"]) / "P5_omicron_wave.jsonl").read_text() == original
-    p1 = [json.loads(line) for line in (directory / "P1_global_onset.jsonl").open()]
+    p1 = [json.loads(line) for line in (directory / "documents.jsonl").open() if json.loads(line)["phase"] == "P1_global_onset"]
     assert [row["digest"] for row in p1] == ["early", "late"]
     assert all(row["capture_phase"] == "P5_omicron_wave" for row in p1)
-    assert (directory / "P5_omicron_wave.jsonl").read_text() == ""
+    assert not (directory / "P5_omicron_wave.jsonl").exists()
     assert summary["counts"]["outside_study"] == summary["counts"]["undated"] == 1
-    assert len(load_phase_records(directory)) == 5
+    assert len(load_records(directory)) == 5
     before = {p.name: p.read_bytes() for p in directory.glob("*.jsonl")}
-    rephase_normalized(directory)
+    refresh_collection_dates(directory)
     assert {p.name: p.read_bytes() for p in directory.glob("*.jsonl")} == before
 
 
@@ -91,11 +92,11 @@ def test_normalize_collection_routes_publication_phases_and_updates_capture_wind
     directory, summary = module.normalize_collection(Client(), 13559, ["P2_pre_vaccine", "P5_omicron_wave"],
                                                        raw_root=raw, output_root=output, use_cache=False)
     assert summary["documents"] == 3
-    p1 = [json.loads(line) for line in (directory / "P1_global_onset.jsonl").open()]
+    p1 = [json.loads(line) for line in (directory / "documents.jsonl").open() if json.loads(line)["phase"] == "P1_global_onset"]
     assert [r["digest"] for r in p1] == ["a", "c"]
     assert {r["capture_phase"] for r in p1} == {"P2_pre_vaccine", "P5_omicron_wave"}
     dates["a"] = "2021-02-01"
     module.normalize_collection(Client(), 13559, ["P2_pre_vaccine"], raw_root=raw, output_root=output, use_cache=False)
-    after = load_phase_records(directory)
+    after = load_records(directory)
     assert len(after) == 3
     assert {r["digest"]: r["phase"] for r in after} == {"a": "P3_vaccine_rollout", "b": "P2_pre_vaccine", "c": "P1_global_onset"}
