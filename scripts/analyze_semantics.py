@@ -5,6 +5,8 @@ Use --input-dir to reuse a metadata.jsonl + embeddings.npy export without Qdrant
 """
 from __future__ import annotations
 
+from contextlib import closing
+
 import argparse
 import hashlib
 from importlib.metadata import version
@@ -52,7 +54,7 @@ def main():
         vectors = np.load(args.input_dir / "embeddings.npy", mmap_mode="r")
     else:
         from qdrant_client import QdrantClient
-        with QdrantClient(url=args.qdrant_url, timeout=120) as client:
+        with closing(QdrantClient(url=args.qdrant_url, timeout=120)) as client:
             raw, vectors = load_qdrant_corpus(client, args.collection)
         input_dir = args.output_dir / "input"
         input_dir.mkdir(parents=True, exist_ok=True)

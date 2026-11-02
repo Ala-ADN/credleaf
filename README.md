@@ -196,8 +196,9 @@ uv run python scripts/run_embed.py 13529 all --collection-name credleaf_dedup_v2
 
 The writer rejects legacy points in the target collection. Select the new
 collection in Notebook 03 before refitting topics and regenerating the GIF.
-The existing README GIF and numerical results below describe the earlier corpus;
-changing deduped collection files does not rewrite existing embeddings or analyses.
+The README results below were regenerated on 2026-11-02 from the completed
+overnight snapshot. Changing deduped collection files does not rewrite existing
+embeddings or analyses.
 
 ## Semantic analysis
 
@@ -209,7 +210,7 @@ lineage, while additional children form new branches. New roots appear when
 there is no eligible predecessor. Topic names appear beside the tree and in
 the matching **articles-per-month plots**, with the same color in both views.
 
-The display selects 12 substantial lineages and their ancestors from 410 monthly
+The display selects 12 substantial lineages and their ancestors from 60 monthly
 topic snapshots. It uses lexical cosine similarity of at least 0.55 and retains
 one parent per snapshot, making a readable forest from the full many-to-many
 evolution graph. Weaker links and merges remain in the underlying export.
@@ -218,10 +219,11 @@ bridge unobserved months. A first observation is not proof of a real-world birth
 
 Article volume counts **distinct captured page URLs per topic/month**, rather
 than embedding chunks. Repeated captures and multiple chunks count once; a
-page may belong to more than one topic. The retained corpus contains 570
-distinct page URLs, including homepages and index pages. Topic names are reviewed
-display labels based on the local keywords, editable in
-[topic_tree_labels.json](notebooks/topic_tree_labels.json).
+page may belong to more than one topic. The retained corpus contains 135
+distinct page URLs, including homepages and index pages. This run uses automatic
+names from topic keywords. The historical reviewed labels in
+[topic_tree_labels.json](notebooks/topic_tree_labels.json) belong to the earlier
+fit and were not applied to these new topic IDs.
 
 [Notebook 03](notebooks/03_embeddings_eda.ipynb) covers global BERTopic,
 topics over time, an interactive intertopic map, topic hierarchy, independent
@@ -237,26 +239,25 @@ monthly topic/term evolution networks, and these credibility comparisons:
   event phase, excluding the query's source host. Authoritative queries
   supply a comparison baseline. Distance measures semantic proximity.
 
-The separate credibility-comparison export retains **39,881 of 82,066 chunks**, across 39 calendar months
-(Jan 2020–Mar 2023): 9,636 low, 10,581 authoritative, and 19,664 mixed. A shared
-BERTopic fit finds 151 topics; 29.8% of retained chunks are outliers. Phase-level
+The credibility-comparison export retains **5,606 of 28,451 chunks**, across 11
+calendar months (Jan–Nov 2020): 1,799 low, 1,144 authoritative, and 2,663 mixed.
+A shared BERTopic fit finds 31 topics; 12.1% of retained chunks are outliers. Phase-level
 dispersion and median authoritative-neighbour distance are:
 
 | Publication phase | Dispersion: low | Dispersion: authoritative | Neighbour distance: low | Neighbour distance: authoritative |
 | ----------------- | --------------: | ------------------------: | ----------------------: | --------------------------------: |
-| Global onset      |           0.568 |                     0.541 |                   0.450 |                             0.335 |
-| Pre-vaccine       |           0.560 |                     0.524 |                   0.479 |                             0.389 |
-| Vaccine rollout   |           0.560 |                     0.488 |                   0.491 |                             0.333 |
-| Delta wave        |           0.563 |                     0.507 |                   0.488 |                             0.388 |
-| Omicron wave      |           0.563 |                     0.534 |                   0.490 |                             0.380 |
+| Global onset      |           0.569 |                     0.562 |                   0.465 |                             0.370 |
 
-In this sample, low-credibility chunks are more dispersed and farther from
-authoritative neighbours in all five shared phases, while their phase-level
-topic entropy is lower. These are **descriptive corpus results**: only two
-low-tier hosts remain from vaccine rollout onward, and no low-tier chunks have
-publication dates in the transition phase. Long pages, index/navigation text,
-off-topic material, and bibliographies affect the clusters. Sources and articles
-are not equally weighted; reference-pool size also affects nearest distances.
+In this sample, low-credibility chunks are slightly more dispersed and farther
+from authoritative neighbours in the onset phase, while their topic entropy is
+lower. These are **descriptive corpus results** from four low-tier, 12
+authoritative, and 78 mixed hosts. All retained chunks fall in the onset phase;
+later phase rows are empty. The overnight run processed the first 3,000 captures
+per collection, so this is a prefix sample, not balanced pandemic coverage and
+not a continuation of the earlier, broader analysis. Long pages, index/navigation
+text, off-topic material, and bibliographies affect the clusters. Stored document
+language labels can also leave mixed-language snippets in the English sample.
+Sources and articles are not equally weighted; reference-pool size affects nearest distances.
 This does not establish a general property of misinformation or classify the
 truth of individual claims.
 
@@ -293,8 +294,10 @@ Alongside the README GIF, the
 [article counts](notebooks/animation_out/semantic_evolution.csv),
 [provenance and parameters](notebooks/animation_out/semantic_evolution.json), and
 [still preview](notebooks/animation_out/semantic_evolution.png) are portable
-README artifacts. Historical encoder identity is unverified; the 1,024-dimensional
-vectors are consistent with the embedding CLI's BGE-M3 default.
+README artifacts. The 1,024-dimensional
+vectors for the current run were generated with **BAAI/bge-m3**, as verified in
+the embedding snapshot. See the [2026-11-02 results and provenance](reports/semantic-2026-11-02/README.md)
+for the exact input snapshot, run settings, metric tables, and topic graph.
 
 ## Quickstart
 

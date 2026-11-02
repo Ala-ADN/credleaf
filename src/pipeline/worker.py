@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 from importlib.metadata import version, PackageNotFoundError
 import json
 import logging
@@ -98,7 +99,9 @@ def execute(request):
         return embed_snapshot(request, paths)
     if stage == "semantic":
         model = store.load(refs[0])["config"]["embed_model"]
+        collection = json.loads((paths[0] / "qdrant.json").read_text())["collection"]
         argv = [sys.executable, str(code_root / "scripts/analyze_semantics.py"),
+            "--collection", collection,
             "--input-dir", str(paths[0] / "input"), "--registry", str(paths[1] / "credibility.json"),
             "--output-dir", str(out), "--gif", str(out / "semantic_comparison.gif"),
             "--collection-ids", *map(str, c["collection_ids"]), "--language", c["language"],
@@ -153,7 +156,7 @@ def embed_snapshot(request, paths):
             with (base / "deduped" / str(ref["collection_id"]) / "documents.jsonl").open(encoding="utf-8") as source:
                 for line in source:
                     target.write(line)
-    with QdrantClient(url=c["qdrant_url"], timeout=120) as client:
+    with closing(QdrantClient(url=c["qdrant_url"], timeout=120)) as client:
         if client.collection_exists(name):
             raise ValueError("Refusing to modify an existing Qdrant collection")
         try:

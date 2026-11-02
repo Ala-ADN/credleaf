@@ -312,6 +312,53 @@ def test_semantic_study_scope_is_explicit():
     assert data.collection_id.tolist() == [4887]
 
 
+def test_semantic_worker_records_actual_embedding_collection(tmp_path, monkeypatch):
+    import pipeline.worker as worker
+    embedding = tmp_path / "embedding"
+    embedding.mkdir()
+    write_json(embedding / "qdrant.json", {"collection": "verified_snapshot_collection"})
+    out = tmp_path / "out"
+    out.mkdir()
+    store = SimpleNamespace(payload=lambda ref: embedding,
+                            load=lambda ref: {"config": {"embed_model": "verified_encoder"}})
+    monkeypatch.setattr(worker, "ArtifactStore", lambda root: store)
+    commands = []
+    def run(argv, **kwargs):
+        commands.append(argv)
+        write_json(out / "metadata.json", {})
+    monkeypatch.setattr(worker.subprocess, "run", run)
+    worker.execute(dict(stage="semantic", root=str(tmp_path), output=str(out), code_root=str(ROOT),
+        collection_id=None, inputs=[{}, {}], config=dict(collection_ids=[13559], language="en",
+        min_words=8, semantic_min_topic_size=50, semantic_min_chunks=20, semantic_seed=42)))
+    args = commands[0]
+    assert args[args.index("--collection") + 1] == "verified_snapshot_collection"
+    assert args[args.index("--embedding-model") + 1] == "verified_encoder"
+
+
+def test_snapshot_import_preserves_exact_corpus_after_code_change(project):
+    _, original, _ = corpus_fixture(project)
+    store = ArtifactStore(project)
+    before = store.bundle(original, "corpus")
+    # src is symlinked to the real checkout; change only a copied fixture file.
+    config_path = project / "pyproject.toml"
+    config_path.write_text(config_path.read_text() + "\n# corrected adapter\n")
+    spec = importlib.util.spec_from_file_location("import_corpus_cli", ROOT / "scripts/import_corpus.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    imported = module.import_corpus(project, sys.executable, source_snapshot=original)
+    after = store.bundle(imported, "corpus")
+    for ref in after["artifacts"]:
+        if not ref["id"]:
+            continue
+        old = store.load(lookup(before, ref["stage"], ref["collection_id"]))
+        new = store.load(ref)
+        assert new["files"] == old["files"]
+        assert new["config"] == old["config"]
+        assert new["stats"]["source_artifact"]["id"] == old["id"]
+        assert new["implementation"] != old["implementation"]
+    store.bundle(original, "corpus")
+
+
 def test_reviewed_labels_are_bound_to_a_reused_graph(project):
     _,base,refs = corpus_fixture(project)
     store=ArtifactStore(project)
@@ -353,8 +400,7 @@ def test_embedding_builds_exclusive_collections_and_freezes_exports(tmp_path, mo
     collections = {}
     class Client:
         def __init__(self, **kwargs): pass
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
+        def close(self): pass
         def collection_exists(self,name): return name in collections
         def count(self,collection_name,**kwargs):
             points = collections.get(collection_name,{})

@@ -1,0 +1,24 @@
+{
+  "analysis_collection_ids": [
+    13529,
+    13559
+  ],
+  "animation_labels": {},
+  "animation_max_topics": 12,
+  "animation_mode": "build",
+  "animation_threshold": 0.55,
+  "base_analysis_id": null,
+  "eta_stage_seconds": {},
+  "language": "en",
+  "min_words": 8,
+  "semantic_min_chunks": 20,
+  "semantic_min_topic_size": 50,
+  "semantic_mode": "build",
+  "semantic_seed": 42,
+  "snapshot_id": "publish-881c9bba55c2b35894e3589a51291bc0",
+  "topic_min_docs": 50,
+  "topic_min_topic_size": 20,
+  "topic_mode": "build",
+  "topic_seed": 42,
+  "topic_threshold": 0.45
+}

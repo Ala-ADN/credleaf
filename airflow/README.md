@@ -107,6 +107,12 @@ reused stage to the current code/runtime, so upgrades can require rebuilding
 artifacts. Existing published corpus snapshots remain available for analysis
 under a new analysis implementation without rebuilding their corpus.
 
+To carry verified core files across an adapter/runtime correction without
+fetching or extracting them again, run `scripts/import_corpus.py --snapshot-id
+publish-...` in the project interpreter. This copies the published core artifacts,
+preserves their parameters and records their original references. It publishes
+a new snapshot for the current implementation, with geography and embeddings off.
+
 A small corpus build, isolated from existing research files:
 
 ```bash

@@ -1,0 +1,162 @@
+{
+  "date": "2026-11-02",
+  "dag_id": "credleaf_analyze_corpus",
+  "run_id": "analysis-publish-20261102",
+  "source_snapshot_id": "publish-881c9bba55c2b35894e3589a51291bc0",
+  "analysis_snapshot_id": "publish-293c551297beeb532139106d2a96d3e4",
+  "artifacts": {
+    "semantic": {
+      "collection_id": null,
+      "id": "semantic-4a3dc58d127e677f4f07425c155e28cf",
+      "sha256": "389d6d7de249ff251ffacdf292e529c599b80798c3107b0447c6b9ebdf837e12",
+      "stage": "semantic"
+    },
+    "topic": {
+      "collection_id": null,
+      "id": "topic-aebf190fd449cfa414aee6da57f3268f",
+      "sha256": "a3b52082b6b8f458d2ce87e77df2ff3bf4677615b85b1b9f85c42cbebb87c61d",
+      "stage": "topic"
+    },
+    "animation": {
+      "collection_id": null,
+      "id": "animation-f4161c3e2a7fc8f33311f5d32c5b7d42",
+      "sha256": "cba465f85a6944d68eefaaca71588ffd2d32be0eaf28a78ce55a9fb439ce680f",
+      "stage": "animation"
+    },
+    "publish": {
+      "collection_id": null,
+      "id": "publish-293c551297beeb532139106d2a96d3e4",
+      "sha256": "d60ba6db0de5c7806b7dc798e1a9dfbe30e46f27c8e84ec445ab846ce51d2a6d",
+      "stage": "publish"
+    }
+  },
+  "source_artifacts": {
+    "embedding": {
+      "collection_id": null,
+      "id": "embed-53d237cf687df05ee9539814b1eab3d9",
+      "sha256": "7b366c548ebc6cee12477db1cf30e1b4bda1e4ef207842863ba31032ad571ed3",
+      "stage": "embed"
+    },
+    "registry": {
+      "collection_id": null,
+      "id": "credibility-c8e8e8f15864ecf67dc0925d6ada9425",
+      "sha256": "27f70552b21ba0b0a389a64ab1f1296049c0c89544c9f64545399d5454498d90",
+      "stage": "credibility"
+    }
+  },
+  "implementation_source": "c94b4306be867c195eadb0fd5568e2770a056383fde383d173659d9e6da5eda7",
+  "summary": {
+    "loaded_chunks": 28451,
+    "retained_chunks": 5606,
+    "unique_page_urls": 135,
+    "tiers": {
+      "mixed": 2663,
+      "low": 1799,
+      "authoritative": 1144
+    },
+    "hosts_by_tier": {
+      "authoritative": 12,
+      "low": 4,
+      "mixed": 78
+    },
+    "date_start": "2020-01-31 00:00:00",
+    "date_end": "2020-11-30 00:00:00",
+    "global_topics": 31,
+    "outlier_fraction": 0.12129860863360685
+  },
+  "export_notes": [
+    "Files copied unchanged from verified artifacts except topic_evolution/chunk_provenance.jsonl, which keeps point_id/capture_url/seed_url only for portable article counts.",
+    "Embedding arrays and full chunk text remain in the local immutable artifact store.",
+    "Historical reviewed topic labels were not applied to the new fit."
+  ],
+  "exported_files": {
+    "reports/semantic-2026-11-02/metadata.json": {
+      "bytes": 1751,
+      "sha256": "4cf9602908ef33deaa31a435f0e1d8bc916351fd8c9d37dc37dd1dab131b8efd"
+    },
+    "reports/semantic-2026-11-02/topics.json": {
+      "bytes": 83422,
+      "sha256": "fb928e3c9d3c9c068ae8b2df82dc9091c15eb866a89a80566f37b9db888f5640"
+    },
+    "reports/semantic-2026-11-02/monthly.csv": {
+      "bytes": 4174,
+      "sha256": "1c82eca6689e1e0748d8bc728ff561bfa4545555d3b570ff555fb4a92db22068"
+    },
+    "reports/semantic-2026-11-02/phases.csv": {
+      "bytes": 1364,
+      "sha256": "8364e93eda1a186675b30aa38c388f42303b50061b6b8945514f32d6bbe9e9db"
+    },
+    "reports/semantic-2026-11-02/neighbours.csv": {
+      "bytes": 696385,
+      "sha256": "449680045f3a64a489cef902e899b2795eace3cb9f0494e68cffb001006b1a45"
+    },
+    "reports/semantic-2026-11-02/neighbour_summary.csv": {
+      "bytes": 348,
+      "sha256": "7d6826bc250ecd77fc3c0102cd8650c887e218d891365114e2ae6a1c5f867776"
+    },
+    "reports/semantic-2026-11-02/semantic_comparison.gif": {
+      "bytes": 335084,
+      "sha256": "ce8824d6f7dffdf72fb00aa6928207bda2eacdaab012ee39d04ff33b883bf883"
+    },
+    "reports/semantic-2026-11-02/semantic_comparison.png": {
+      "bytes": 177606,
+      "sha256": "80153ced8d64dd92aec7874a25c3f2a60e51f7aa2c664d2c4740188b472c463f"
+    },
+    "reports/semantic-2026-11-02/semantic_comparison.csv": {
+      "bytes": 1785,
+      "sha256": "3341531791de5c422494a98d4490d4ccba71fff9381408a784b8cd81217d9f44"
+    },
+    "reports/semantic-2026-11-02/semantic_comparison.json": {
+      "bytes": 1751,
+      "sha256": "4cf9602908ef33deaa31a435f0e1d8bc916351fd8c9d37dc37dd1dab131b8efd"
+    },
+    "reports/semantic-2026-11-02/display_labels.json": {
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    "reports/semantic-2026-11-02/analysis_config.json": {
+      "bytes": 569,
+      "sha256": "031061cb2c445f7d9ce35690a6fa94f64ea1751a96a5e627c27a0a550ebd74c6"
+    },
+    "reports/semantic-2026-11-02/topic_evolution/chunk_provenance.jsonl": {
+      "bytes": 1173630,
+      "sha256": "5ea8fd0d77856a68f81a7078e9524ddd8848e069de09581c70058a48855c5741"
+    },
+    "reports/semantic-2026-11-02/topic_evolution/topics/nodes.jsonl": {
+      "bytes": 31477,
+      "sha256": "9995d340a88111467efc6491ddbb3af1bcc63d326d73e8308110a2b1cca7f70a"
+    },
+    "reports/semantic-2026-11-02/topic_evolution/topics/edges.jsonl": {
+      "bytes": 11635,
+      "sha256": "68a2456c2c571faa2e16f2337d5ae8770922c05052fe800229150e2dded8ffa0"
+    },
+    "reports/semantic-2026-11-02/topic_evolution/topics/membership.jsonl": {
+      "bytes": 705388,
+      "sha256": "e55ab828170a3f02d6b9aeff6e4641481891244ad4cba5044f88619e28d8e7fe"
+    },
+    "reports/semantic-2026-11-02/topic_evolution/topics/coverage.jsonl": {
+      "bytes": 1744,
+      "sha256": "7230edbf0eb82ec703a88e493ca0e1477e539a1656767965e98dfd53219def1f"
+    },
+    "reports/semantic-2026-11-02/topic_evolution/topics/metadata.json": {
+      "bytes": 288,
+      "sha256": "ccaa872e916e61580070a45517220dd12de17b85aa6d62841348ae0b0caf6217"
+    },
+    "notebooks/animation_out/semantic_evolution.gif": {
+      "bytes": 408780,
+      "sha256": "2c203698f8fa1db6a7a55721c399500fe55b10297b55acdfd8088f21d9130a06"
+    },
+    "notebooks/animation_out/semantic_evolution.png": {
+      "bytes": 218209,
+      "sha256": "a5f62e7fe416d2ccbb794f39ef29072668734907de659fd1e6db750507ef42cf"
+    },
+    "notebooks/animation_out/semantic_evolution.csv": {
+      "bytes": 7711,
+      "sha256": "b9e0be7fbd51e05543b3c5314e1670e8afc61b1b856d79a44fb18a0a26e49a85"
+    },
+    "notebooks/animation_out/semantic_evolution.json": {
+      "bytes": 2333,
+      "sha256": "2f19fc563235a4fb9c188d4b29ebb9f32304de6048838612a5500c8a341d30a6"
+    }
+  }
+}

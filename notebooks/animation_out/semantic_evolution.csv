@@ -1,469 +1,133 @@
 window,track_id,articles,name
-2020-01-01,topic:2020-02-01:1,,COVID-19 information
-2020-01-01,topic:2020-03-01:14,,CDC response
-2020-01-01,topic:2020-04-01:9,,Health resources
-2020-01-01,topic:2020-11-01:10,,Virus transmission
-2020-01-01,topic:2020-12-01:20,,HIV & COVID-19
-2020-01-01,topic:2020-12-01:4,,Local health information
-2020-01-01,topic:2020-02-01:4,,Symptoms & quarantine
-2020-01-01,topic:2020-02-01:5,,News & commentary
-2020-01-01,topic:2020-12-01:2,,Masks & hygiene
-2020-01-01,topic:2020-12-01:5,,Public health guidance
-2020-01-01,topic:2021-06-01:0,,Politics & economy
-2020-01-01,topic:2021-10-01:1,,COVID-19 advice
-2020-02-01,topic:2020-02-01:1,27.0,COVID-19 information
-2020-02-01,topic:2020-03-01:14,0.0,CDC response
-2020-02-01,topic:2020-04-01:9,0.0,Health resources
-2020-02-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-02-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-02-01,topic:2020-12-01:4,0.0,Local health information
-2020-02-01,topic:2020-02-01:4,17.0,Symptoms & quarantine
-2020-02-01,topic:2020-02-01:5,10.0,News & commentary
-2020-02-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-02-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-02-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-02-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-03-01,topic:2020-02-01:1,27.0,COVID-19 information
-2020-03-01,topic:2020-03-01:14,30.0,CDC response
-2020-03-01,topic:2020-04-01:9,0.0,Health resources
-2020-03-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-03-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-03-01,topic:2020-12-01:4,0.0,Local health information
-2020-03-01,topic:2020-02-01:4,21.0,Symptoms & quarantine
-2020-03-01,topic:2020-02-01:5,7.0,News & commentary
-2020-03-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-03-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-03-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-03-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-04-01,topic:2020-02-01:1,12.0,COVID-19 information
-2020-04-01,topic:2020-03-01:14,11.0,CDC response
-2020-04-01,topic:2020-04-01:9,9.0,Health resources
-2020-04-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-04-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-04-01,topic:2020-12-01:4,0.0,Local health information
-2020-04-01,topic:2020-02-01:4,4.0,Symptoms & quarantine
-2020-04-01,topic:2020-02-01:5,5.0,News & commentary
-2020-04-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-04-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-04-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-04-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-05-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-05-01,topic:2020-03-01:14,0.0,CDC response
-2020-05-01,topic:2020-04-01:9,21.0,Health resources
-2020-05-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-05-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-05-01,topic:2020-12-01:4,0.0,Local health information
-2020-05-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-05-01,topic:2020-02-01:5,6.0,News & commentary
-2020-05-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-05-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-05-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-05-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-06-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-06-01,topic:2020-03-01:14,0.0,CDC response
-2020-06-01,topic:2020-04-01:9,8.0,Health resources
-2020-06-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-06-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-06-01,topic:2020-12-01:4,0.0,Local health information
-2020-06-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-06-01,topic:2020-02-01:5,6.0,News & commentary
-2020-06-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-06-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-06-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-06-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-07-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-07-01,topic:2020-03-01:14,0.0,CDC response
-2020-07-01,topic:2020-04-01:9,20.0,Health resources
-2020-07-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-07-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-07-01,topic:2020-12-01:4,0.0,Local health information
-2020-07-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-07-01,topic:2020-02-01:5,8.0,News & commentary
-2020-07-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-07-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-07-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-07-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-08-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-08-01,topic:2020-03-01:14,0.0,CDC response
-2020-08-01,topic:2020-04-01:9,17.0,Health resources
-2020-08-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-08-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-08-01,topic:2020-12-01:4,0.0,Local health information
-2020-08-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-08-01,topic:2020-02-01:5,6.0,News & commentary
-2020-08-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-08-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-08-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-08-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-09-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-09-01,topic:2020-03-01:14,0.0,CDC response
-2020-09-01,topic:2020-04-01:9,20.0,Health resources
-2020-09-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-09-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-09-01,topic:2020-12-01:4,0.0,Local health information
-2020-09-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-09-01,topic:2020-02-01:5,9.0,News & commentary
-2020-09-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-09-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-09-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-09-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-10-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-10-01,topic:2020-03-01:14,0.0,CDC response
-2020-10-01,topic:2020-04-01:9,21.0,Health resources
-2020-10-01,topic:2020-11-01:10,0.0,Virus transmission
-2020-10-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-10-01,topic:2020-12-01:4,0.0,Local health information
-2020-10-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-10-01,topic:2020-02-01:5,0.0,News & commentary
-2020-10-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-10-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-10-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-10-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-11-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-11-01,topic:2020-03-01:14,0.0,CDC response
-2020-11-01,topic:2020-04-01:9,24.0,Health resources
-2020-11-01,topic:2020-11-01:10,13.0,Virus transmission
-2020-11-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2020-11-01,topic:2020-12-01:4,0.0,Local health information
-2020-11-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-11-01,topic:2020-02-01:5,0.0,News & commentary
-2020-11-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2020-11-01,topic:2020-12-01:5,0.0,Public health guidance
-2020-11-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-11-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2020-12-01,topic:2020-02-01:1,0.0,COVID-19 information
-2020-12-01,topic:2020-03-01:14,0.0,CDC response
-2020-12-01,topic:2020-04-01:9,41.0,Health resources
-2020-12-01,topic:2020-11-01:10,30.0,Virus transmission
-2020-12-01,topic:2020-12-01:20,15.0,HIV & COVID-19
-2020-12-01,topic:2020-12-01:4,36.0,Local health information
-2020-12-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2020-12-01,topic:2020-02-01:5,0.0,News & commentary
-2020-12-01,topic:2020-12-01:2,44.0,Masks & hygiene
-2020-12-01,topic:2020-12-01:5,39.0,Public health guidance
-2020-12-01,topic:2021-06-01:0,0.0,Politics & economy
-2020-12-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-01-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-01-01,topic:2020-03-01:14,0.0,CDC response
-2021-01-01,topic:2020-04-01:9,3.0,Health resources
-2021-01-01,topic:2020-11-01:10,22.0,Virus transmission
-2021-01-01,topic:2020-12-01:20,30.0,HIV & COVID-19
-2021-01-01,topic:2020-12-01:4,19.0,Local health information
-2021-01-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-01-01,topic:2020-02-01:5,0.0,News & commentary
-2021-01-01,topic:2020-12-01:2,23.0,Masks & hygiene
-2021-01-01,topic:2020-12-01:5,8.0,Public health guidance
-2021-01-01,topic:2021-06-01:0,0.0,Politics & economy
-2021-01-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-02-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-02-01,topic:2020-03-01:14,0.0,CDC response
-2021-02-01,topic:2020-04-01:9,0.0,Health resources
-2021-02-01,topic:2020-11-01:10,16.0,Virus transmission
-2021-02-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-02-01,topic:2020-12-01:4,0.0,Local health information
-2021-02-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-02-01,topic:2020-02-01:5,0.0,News & commentary
-2021-02-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-02-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-02-01,topic:2021-06-01:0,0.0,Politics & economy
-2021-02-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-03-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-03-01,topic:2020-03-01:14,0.0,CDC response
-2021-03-01,topic:2020-04-01:9,0.0,Health resources
-2021-03-01,topic:2020-11-01:10,20.0,Virus transmission
-2021-03-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-03-01,topic:2020-12-01:4,0.0,Local health information
-2021-03-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-03-01,topic:2020-02-01:5,0.0,News & commentary
-2021-03-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-03-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-03-01,topic:2021-06-01:0,0.0,Politics & economy
-2021-03-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-04-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-04-01,topic:2020-03-01:14,0.0,CDC response
-2021-04-01,topic:2020-04-01:9,0.0,Health resources
-2021-04-01,topic:2020-11-01:10,34.0,Virus transmission
-2021-04-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-04-01,topic:2020-12-01:4,0.0,Local health information
-2021-04-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-04-01,topic:2020-02-01:5,0.0,News & commentary
-2021-04-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-04-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-04-01,topic:2021-06-01:0,0.0,Politics & economy
-2021-04-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-05-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-05-01,topic:2020-03-01:14,0.0,CDC response
-2021-05-01,topic:2020-04-01:9,0.0,Health resources
-2021-05-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-05-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-05-01,topic:2020-12-01:4,0.0,Local health information
-2021-05-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-05-01,topic:2020-02-01:5,0.0,News & commentary
-2021-05-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-05-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-05-01,topic:2021-06-01:0,0.0,Politics & economy
-2021-05-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-06-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-06-01,topic:2020-03-01:14,0.0,CDC response
-2021-06-01,topic:2020-04-01:9,0.0,Health resources
-2021-06-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-06-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-06-01,topic:2020-12-01:4,0.0,Local health information
-2021-06-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-06-01,topic:2020-02-01:5,0.0,News & commentary
-2021-06-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-06-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-06-01,topic:2021-06-01:0,2.0,Politics & economy
-2021-06-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-07-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-07-01,topic:2020-03-01:14,0.0,CDC response
-2021-07-01,topic:2020-04-01:9,0.0,Health resources
-2021-07-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-07-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-07-01,topic:2020-12-01:4,0.0,Local health information
-2021-07-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-07-01,topic:2020-02-01:5,0.0,News & commentary
-2021-07-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-07-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-07-01,topic:2021-06-01:0,3.0,Politics & economy
-2021-07-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-08-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-08-01,topic:2020-03-01:14,0.0,CDC response
-2021-08-01,topic:2020-04-01:9,0.0,Health resources
-2021-08-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-08-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-08-01,topic:2020-12-01:4,0.0,Local health information
-2021-08-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-08-01,topic:2020-02-01:5,0.0,News & commentary
-2021-08-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-08-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-08-01,topic:2021-06-01:0,5.0,Politics & economy
-2021-08-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-09-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-09-01,topic:2020-03-01:14,0.0,CDC response
-2021-09-01,topic:2020-04-01:9,0.0,Health resources
-2021-09-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-09-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-09-01,topic:2020-12-01:4,0.0,Local health information
-2021-09-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-09-01,topic:2020-02-01:5,0.0,News & commentary
-2021-09-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-09-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-09-01,topic:2021-06-01:0,4.0,Politics & economy
-2021-09-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2021-10-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-10-01,topic:2020-03-01:14,0.0,CDC response
-2021-10-01,topic:2020-04-01:9,0.0,Health resources
-2021-10-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-10-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-10-01,topic:2020-12-01:4,0.0,Local health information
-2021-10-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-10-01,topic:2020-02-01:5,0.0,News & commentary
-2021-10-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-10-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-10-01,topic:2021-06-01:0,3.0,Politics & economy
-2021-10-01,topic:2021-10-01:1,15.0,COVID-19 advice
-2021-11-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-11-01,topic:2020-03-01:14,0.0,CDC response
-2021-11-01,topic:2020-04-01:9,0.0,Health resources
-2021-11-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-11-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-11-01,topic:2020-12-01:4,0.0,Local health information
-2021-11-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-11-01,topic:2020-02-01:5,0.0,News & commentary
-2021-11-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-11-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-11-01,topic:2021-06-01:0,1.0,Politics & economy
-2021-11-01,topic:2021-10-01:1,12.0,COVID-19 advice
-2021-12-01,topic:2020-02-01:1,0.0,COVID-19 information
-2021-12-01,topic:2020-03-01:14,0.0,CDC response
-2021-12-01,topic:2020-04-01:9,0.0,Health resources
-2021-12-01,topic:2020-11-01:10,0.0,Virus transmission
-2021-12-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2021-12-01,topic:2020-12-01:4,0.0,Local health information
-2021-12-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2021-12-01,topic:2020-02-01:5,0.0,News & commentary
-2021-12-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2021-12-01,topic:2020-12-01:5,0.0,Public health guidance
-2021-12-01,topic:2021-06-01:0,5.0,Politics & economy
-2021-12-01,topic:2021-10-01:1,17.0,COVID-19 advice
-2022-01-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-01-01,topic:2020-03-01:14,0.0,CDC response
-2022-01-01,topic:2020-04-01:9,0.0,Health resources
-2022-01-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-01-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-01-01,topic:2020-12-01:4,0.0,Local health information
-2022-01-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-01-01,topic:2020-02-01:5,0.0,News & commentary
-2022-01-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-01-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-01-01,topic:2021-06-01:0,9.0,Politics & economy
-2022-01-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-02-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-02-01,topic:2020-03-01:14,0.0,CDC response
-2022-02-01,topic:2020-04-01:9,0.0,Health resources
-2022-02-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-02-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-02-01,topic:2020-12-01:4,0.0,Local health information
-2022-02-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-02-01,topic:2020-02-01:5,0.0,News & commentary
-2022-02-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-02-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-02-01,topic:2021-06-01:0,1.0,Politics & economy
-2022-02-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-03-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-03-01,topic:2020-03-01:14,0.0,CDC response
-2022-03-01,topic:2020-04-01:9,0.0,Health resources
-2022-03-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-03-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-03-01,topic:2020-12-01:4,0.0,Local health information
-2022-03-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-03-01,topic:2020-02-01:5,0.0,News & commentary
-2022-03-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-03-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-03-01,topic:2021-06-01:0,1.0,Politics & economy
-2022-03-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-04-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-04-01,topic:2020-03-01:14,0.0,CDC response
-2022-04-01,topic:2020-04-01:9,0.0,Health resources
-2022-04-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-04-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-04-01,topic:2020-12-01:4,0.0,Local health information
-2022-04-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-04-01,topic:2020-02-01:5,0.0,News & commentary
-2022-04-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-04-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-04-01,topic:2021-06-01:0,4.0,Politics & economy
-2022-04-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-05-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-05-01,topic:2020-03-01:14,0.0,CDC response
-2022-05-01,topic:2020-04-01:9,0.0,Health resources
-2022-05-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-05-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-05-01,topic:2020-12-01:4,0.0,Local health information
-2022-05-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-05-01,topic:2020-02-01:5,0.0,News & commentary
-2022-05-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-05-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-05-01,topic:2021-06-01:0,2.0,Politics & economy
-2022-05-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-06-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-06-01,topic:2020-03-01:14,0.0,CDC response
-2022-06-01,topic:2020-04-01:9,0.0,Health resources
-2022-06-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-06-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-06-01,topic:2020-12-01:4,0.0,Local health information
-2022-06-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-06-01,topic:2020-02-01:5,0.0,News & commentary
-2022-06-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-06-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-06-01,topic:2021-06-01:0,3.0,Politics & economy
-2022-06-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-07-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-07-01,topic:2020-03-01:14,0.0,CDC response
-2022-07-01,topic:2020-04-01:9,0.0,Health resources
-2022-07-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-07-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-07-01,topic:2020-12-01:4,0.0,Local health information
-2022-07-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-07-01,topic:2020-02-01:5,0.0,News & commentary
-2022-07-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-07-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-07-01,topic:2021-06-01:0,0.0,Politics & economy
-2022-07-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-08-01,topic:2020-02-01:1,,COVID-19 information
-2022-08-01,topic:2020-03-01:14,,CDC response
-2022-08-01,topic:2020-04-01:9,,Health resources
-2022-08-01,topic:2020-11-01:10,,Virus transmission
-2022-08-01,topic:2020-12-01:20,,HIV & COVID-19
-2022-08-01,topic:2020-12-01:4,,Local health information
-2022-08-01,topic:2020-02-01:4,,Symptoms & quarantine
-2022-08-01,topic:2020-02-01:5,,News & commentary
-2022-08-01,topic:2020-12-01:2,,Masks & hygiene
-2022-08-01,topic:2020-12-01:5,,Public health guidance
-2022-08-01,topic:2021-06-01:0,,Politics & economy
-2022-08-01,topic:2021-10-01:1,,COVID-19 advice
-2022-09-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-09-01,topic:2020-03-01:14,0.0,CDC response
-2022-09-01,topic:2020-04-01:9,0.0,Health resources
-2022-09-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-09-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-09-01,topic:2020-12-01:4,0.0,Local health information
-2022-09-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-09-01,topic:2020-02-01:5,0.0,News & commentary
-2022-09-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-09-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-09-01,topic:2021-06-01:0,0.0,Politics & economy
-2022-09-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-10-01,topic:2020-02-01:1,0.0,COVID-19 information
-2022-10-01,topic:2020-03-01:14,0.0,CDC response
-2022-10-01,topic:2020-04-01:9,0.0,Health resources
-2022-10-01,topic:2020-11-01:10,0.0,Virus transmission
-2022-10-01,topic:2020-12-01:20,0.0,HIV & COVID-19
-2022-10-01,topic:2020-12-01:4,0.0,Local health information
-2022-10-01,topic:2020-02-01:4,0.0,Symptoms & quarantine
-2022-10-01,topic:2020-02-01:5,0.0,News & commentary
-2022-10-01,topic:2020-12-01:2,0.0,Masks & hygiene
-2022-10-01,topic:2020-12-01:5,0.0,Public health guidance
-2022-10-01,topic:2021-06-01:0,0.0,Politics & economy
-2022-10-01,topic:2021-10-01:1,0.0,COVID-19 advice
-2022-11-01,topic:2020-02-01:1,,COVID-19 information
-2022-11-01,topic:2020-03-01:14,,CDC response
-2022-11-01,topic:2020-04-01:9,,Health resources
-2022-11-01,topic:2020-11-01:10,,Virus transmission
-2022-11-01,topic:2020-12-01:20,,HIV & COVID-19
-2022-11-01,topic:2020-12-01:4,,Local health information
-2022-11-01,topic:2020-02-01:4,,Symptoms & quarantine
-2022-11-01,topic:2020-02-01:5,,News & commentary
-2022-11-01,topic:2020-12-01:2,,Masks & hygiene
-2022-11-01,topic:2020-12-01:5,,Public health guidance
-2022-11-01,topic:2021-06-01:0,,Politics & economy
-2022-11-01,topic:2021-10-01:1,,COVID-19 advice
-2022-12-01,topic:2020-02-01:1,,COVID-19 information
-2022-12-01,topic:2020-03-01:14,,CDC response
-2022-12-01,topic:2020-04-01:9,,Health resources
-2022-12-01,topic:2020-11-01:10,,Virus transmission
-2022-12-01,topic:2020-12-01:20,,HIV & COVID-19
-2022-12-01,topic:2020-12-01:4,,Local health information
-2022-12-01,topic:2020-02-01:4,,Symptoms & quarantine
-2022-12-01,topic:2020-02-01:5,,News & commentary
-2022-12-01,topic:2020-12-01:2,,Masks & hygiene
-2022-12-01,topic:2020-12-01:5,,Public health guidance
-2022-12-01,topic:2021-06-01:0,,Politics & economy
-2022-12-01,topic:2021-10-01:1,,COVID-19 advice
-2023-01-01,topic:2020-02-01:1,,COVID-19 information
-2023-01-01,topic:2020-03-01:14,,CDC response
-2023-01-01,topic:2020-04-01:9,,Health resources
-2023-01-01,topic:2020-11-01:10,,Virus transmission
-2023-01-01,topic:2020-12-01:20,,HIV & COVID-19
-2023-01-01,topic:2020-12-01:4,,Local health information
-2023-01-01,topic:2020-02-01:4,,Symptoms & quarantine
-2023-01-01,topic:2020-02-01:5,,News & commentary
-2023-01-01,topic:2020-12-01:2,,Masks & hygiene
-2023-01-01,topic:2020-12-01:5,,Public health guidance
-2023-01-01,topic:2021-06-01:0,,Politics & economy
-2023-01-01,topic:2021-10-01:1,,COVID-19 advice
-2023-02-01,topic:2020-02-01:1,,COVID-19 information
-2023-02-01,topic:2020-03-01:14,,CDC response
-2023-02-01,topic:2020-04-01:9,,Health resources
-2023-02-01,topic:2020-11-01:10,,Virus transmission
-2023-02-01,topic:2020-12-01:20,,HIV & COVID-19
-2023-02-01,topic:2020-12-01:4,,Local health information
-2023-02-01,topic:2020-02-01:4,,Symptoms & quarantine
-2023-02-01,topic:2020-02-01:5,,News & commentary
-2023-02-01,topic:2020-12-01:2,,Masks & hygiene
-2023-02-01,topic:2020-12-01:5,,Public health guidance
-2023-02-01,topic:2021-06-01:0,,Politics & economy
-2023-02-01,topic:2021-10-01:1,,COVID-19 advice
-2023-03-01,topic:2020-02-01:1,,COVID-19 information
-2023-03-01,topic:2020-03-01:14,,CDC response
-2023-03-01,topic:2020-04-01:9,,Health resources
-2023-03-01,topic:2020-11-01:10,,Virus transmission
-2023-03-01,topic:2020-12-01:20,,HIV & COVID-19
-2023-03-01,topic:2020-12-01:4,,Local health information
-2023-03-01,topic:2020-02-01:4,,Symptoms & quarantine
-2023-03-01,topic:2020-02-01:5,,News & commentary
-2023-03-01,topic:2020-12-01:2,,Masks & hygiene
-2023-03-01,topic:2020-12-01:5,,Public health guidance
-2023-03-01,topic:2021-06-01:0,,Politics & economy
-2023-03-01,topic:2021-10-01:1,,COVID-19 advice
+2020-01-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-01-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-01-01,topic:2020-02-01:15,0.0,said / china / home
+2020-01-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-01-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-01-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-01-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-01-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-01-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-01-01,topic:2020-02-01:6,0.0,china / health / said
+2020-01-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-01-01,topic:2020-03-01:4,0.0,19 / covid / covid 19
+2020-02-01,topic:2020-02-01:11,11.0,new / source / cases
+2020-02-01,topic:2020-02-01:13,20.0,email / 2020 / click
+2020-02-01,topic:2020-02-01:15,13.0,said / china / home
+2020-02-01,topic:2020-02-01:17,32.0,health / like / disease
+2020-02-01,topic:2020-02-01:18,23.0,cases / coronavirus / people
+2020-02-01,topic:2020-02-01:3,14.0,princess / ship / diamond
+2020-02-01,topic:2020-02-01:4,29.0,2020 / 19 / covid
+2020-02-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-02-01,topic:2020-02-01:5,22.0,coronavirus / disease / virus
+2020-02-01,topic:2020-02-01:6,21.0,china / health / said
+2020-02-01,topic:2020-02-01:8,19.0,china / coronavirus / health
+2020-02-01,topic:2020-03-01:4,0.0,19 / covid / covid 19
+2020-03-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-03-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-03-01,topic:2020-02-01:15,0.0,said / china / home
+2020-03-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-03-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-03-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-03-01,topic:2020-02-01:4,10.0,2020 / 19 / covid
+2020-03-01,topic:2020-03-01:0,12.0,19 / covid / covid 19
+2020-03-01,topic:2020-02-01:5,18.0,coronavirus / disease / virus
+2020-03-01,topic:2020-02-01:6,0.0,china / health / said
+2020-03-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-03-01,topic:2020-03-01:4,8.0,19 / covid / covid 19
+2020-04-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-04-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-04-01,topic:2020-02-01:15,0.0,said / china / home
+2020-04-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-04-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-04-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-04-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-04-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-04-01,topic:2020-02-01:5,5.0,coronavirus / disease / virus
+2020-04-01,topic:2020-02-01:6,0.0,china / health / said
+2020-04-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-04-01,topic:2020-03-01:4,11.0,19 / covid / covid 19
+2020-05-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-05-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-05-01,topic:2020-02-01:15,0.0,said / china / home
+2020-05-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-05-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-05-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-05-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-05-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-05-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-05-01,topic:2020-02-01:6,0.0,china / health / said
+2020-05-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-05-01,topic:2020-03-01:4,7.0,19 / covid / covid 19
+2020-06-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-06-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-06-01,topic:2020-02-01:15,0.0,said / china / home
+2020-06-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-06-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-06-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-06-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-06-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-06-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-06-01,topic:2020-02-01:6,0.0,china / health / said
+2020-06-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-06-01,topic:2020-03-01:4,6.0,19 / covid / covid 19
+2020-07-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-07-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-07-01,topic:2020-02-01:15,0.0,said / china / home
+2020-07-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-07-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-07-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-07-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-07-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-07-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-07-01,topic:2020-02-01:6,0.0,china / health / said
+2020-07-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-07-01,topic:2020-03-01:4,6.0,19 / covid / covid 19
+2020-08-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-08-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-08-01,topic:2020-02-01:15,0.0,said / china / home
+2020-08-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-08-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-08-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-08-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-08-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-08-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-08-01,topic:2020-02-01:6,0.0,china / health / said
+2020-08-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-08-01,topic:2020-03-01:4,3.0,19 / covid / covid 19
+2020-09-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-09-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-09-01,topic:2020-02-01:15,0.0,said / china / home
+2020-09-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-09-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-09-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-09-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-09-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-09-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-09-01,topic:2020-02-01:6,0.0,china / health / said
+2020-09-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-09-01,topic:2020-03-01:4,2.0,19 / covid / covid 19
+2020-10-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-10-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-10-01,topic:2020-02-01:15,0.0,said / china / home
+2020-10-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-10-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-10-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-10-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-10-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-10-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-10-01,topic:2020-02-01:6,0.0,china / health / said
+2020-10-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-10-01,topic:2020-03-01:4,6.0,19 / covid / covid 19
+2020-11-01,topic:2020-02-01:11,0.0,new / source / cases
+2020-11-01,topic:2020-02-01:13,0.0,email / 2020 / click
+2020-11-01,topic:2020-02-01:15,0.0,said / china / home
+2020-11-01,topic:2020-02-01:17,0.0,health / like / disease
+2020-11-01,topic:2020-02-01:18,0.0,cases / coronavirus / people
+2020-11-01,topic:2020-02-01:3,0.0,princess / ship / diamond
+2020-11-01,topic:2020-02-01:4,0.0,2020 / 19 / covid
+2020-11-01,topic:2020-03-01:0,0.0,19 / covid / covid 19
+2020-11-01,topic:2020-02-01:5,0.0,coronavirus / disease / virus
+2020-11-01,topic:2020-02-01:6,0.0,china / health / said
+2020-11-01,topic:2020-02-01:8,0.0,china / coronavirus / health
+2020-11-01,topic:2020-03-01:4,3.0,19 / covid / covid 19
