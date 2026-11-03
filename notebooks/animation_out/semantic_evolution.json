@@ -1,76 +1,76 @@
 {
   "purpose": "growing primary-parent topic forest with article volume",
-  "input_dir": "/opt/credleaf/data/pipeline/artifacts/topic-aebf190fd449cfa414aee6da57f3268f/files",
+  "input_dir": "data/processed/topic_evolution",
   "threshold": 0.55,
   "displayed_lineages": 12,
-  "total_lineages": 48,
-  "frames": 11,
+  "total_lineages": 329,
+  "frames": 39,
   "article_unit": "distinct captured source-page URL without fragment per topic/month",
   "article_overlap": "one page may belong to multiple topics; repeated chunks/captures counted once",
   "lineage_rule": "strongest adjacent-window predecessor; best child continues; other children branch",
   "selection": "article-months times square root of observed months; include every parent lineage",
   "labels": [
     {
-      "track_id": "topic:2020-02-01:11",
-      "name": "new / source / cases",
+      "track_id": "topic:2020-02-01:1",
+      "name": "COVID-19 information",
       "parent_track": null
     },
     {
-      "track_id": "topic:2020-02-01:13",
-      "name": "email / 2020 / click",
-      "parent_track": null
+      "track_id": "topic:2020-03-01:14",
+      "name": "CDC response",
+      "parent_track": "topic:2020-02-01:1"
     },
     {
-      "track_id": "topic:2020-02-01:15",
-      "name": "said / china / home",
-      "parent_track": null
+      "track_id": "topic:2020-04-01:9",
+      "name": "Health resources",
+      "parent_track": "topic:2020-02-01:1"
     },
     {
-      "track_id": "topic:2020-02-01:17",
-      "name": "health / like / disease",
-      "parent_track": null
+      "track_id": "topic:2020-11-01:10",
+      "name": "Virus transmission",
+      "parent_track": "topic:2020-04-01:9"
     },
     {
-      "track_id": "topic:2020-02-01:18",
-      "name": "cases / coronavirus / people",
-      "parent_track": null
+      "track_id": "topic:2020-12-01:20",
+      "name": "HIV & COVID-19",
+      "parent_track": "topic:2020-04-01:9"
     },
     {
-      "track_id": "topic:2020-02-01:3",
-      "name": "princess / ship / diamond",
-      "parent_track": null
+      "track_id": "topic:2020-12-01:4",
+      "name": "Local health information",
+      "parent_track": "topic:2020-04-01:9"
     },
     {
       "track_id": "topic:2020-02-01:4",
-      "name": "2020 / 19 / covid",
+      "name": "Symptoms & quarantine",
       "parent_track": null
-    },
-    {
-      "track_id": "topic:2020-03-01:0",
-      "name": "19 / covid / covid 19",
-      "parent_track": "topic:2020-02-01:4"
     },
     {
       "track_id": "topic:2020-02-01:5",
-      "name": "coronavirus / disease / virus",
+      "name": "News & commentary",
       "parent_track": null
     },
     {
-      "track_id": "topic:2020-02-01:6",
-      "name": "china / health / said",
+      "track_id": "topic:2020-12-01:2",
+      "name": "Masks & hygiene",
       "parent_track": null
     },
     {
-      "track_id": "topic:2020-02-01:8",
-      "name": "china / coronavirus / health",
+      "track_id": "topic:2020-12-01:5",
+      "name": "Public health guidance",
       "parent_track": null
     },
     {
-      "track_id": "topic:2020-03-01:4",
-      "name": "19 / covid / covid 19",
+      "track_id": "topic:2021-06-01:0",
+      "name": "Politics & economy",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2021-10-01:1",
+      "name": "COVID-19 advice",
       "parent_track": null
     }
   ],
-  "label_origin": "automatic names from root topic keywords",
+  "label_origin": "display names reviewed against the root topic's keywords; names follow the displayed lineage",
   "limitation": "retrospective display projection; weaker edges/merges omitted; first observation is not necessarily birth"
 }

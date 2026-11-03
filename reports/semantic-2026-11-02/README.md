@@ -17,9 +17,9 @@ embedding snapshot. Both analysis stages and both animations completed in Airflo
 
 The retained sample covers only the onset phase. The extraction attempted the
 first 3,000 captures per collection, rather than balancing capture or publication
-dates. These results replace the README's earlier broader sample; they do not
-demonstrate change over later pandemic phases. Source tiers describe domains,
-not the truth of individual claims. Language filtering uses stored document
+dates. These results are archived separately from the README's restored broader
+sample; they do not demonstrate change over later pandemic phases. Source tiers
+describe domains, not the truth of individual claims. Language filtering uses stored document
 labels, which can leave mixed-language snippets in the English sample.
 
 For the onset phase, low-tier dispersion is 0.569 versus 0.562 for authoritative
@@ -32,7 +32,7 @@ size affect the comparisons. See [phase metrics](phases.csv),
 ![Semantic comparison preview](semantic_comparison.png)
 
 The [comparison GIF](semantic_comparison.gif) shows the shared retrospective PCA
-view and full-space metrics. The [topic-tree GIF](../../notebooks/animation_out/semantic_evolution.gif)
+view and full-space metrics. The [topic-tree GIF](https://github.com/Ala-ADN/credleaf/blob/9ee16efaafd80e6ab550804b9c5af7c8ce82d925/notebooks/animation_out/semantic_evolution.gif)
 shows 12 selected lineages from 48 total, with article counts. Both use automatic
 topic keywords; historical reviewed labels belong to the earlier topic fit.
 
