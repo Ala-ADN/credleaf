@@ -78,11 +78,18 @@ def history_estimate(directory, work, linear=False):
 
 def estimate(elapsed, baseline=None, progress=None, terminal=None, now=None):
     now = now or datetime.now(timezone.utc)
+    wall_elapsed = elapsed
+    paused_seconds = (progress or {}).get("paused_seconds", 0.)
+    elapsed = (progress or {}).get("processing_seconds", max(0., elapsed - paused_seconds))
     result = dict(elapsed_seconds=round(elapsed, 3), remaining_seconds=None,
+                  wall_elapsed_seconds=round(wall_elapsed, 3), paused_seconds=paused_seconds,
                   estimated_finish_at=None, source="calibrating", updated_at=now.isoformat(),
                   excludes="queue time and retries")
     if terminal:
         result.update(source="actual", remaining_seconds=0 if terminal in {"success", "cached", "reused", "off"} else None)
+        return result
+    if progress and progress.get("paused"):
+        result.update(source="paused", progress=progress)
         return result
     remaining = None
     if baseline:
@@ -152,7 +159,7 @@ class Tracker:
 
     def _refresh(self, terminal=None):
         progress = None
-        if self.progress_path and not terminal:
+        if self.progress_path:
             try:
                 progress = json.loads(Path(self.progress_path).read_text())
                 if not isinstance(progress, dict):
@@ -161,8 +168,8 @@ class Tracker:
                 pass
         try:
             elapsed = time.monotonic() - self.started
-            self.report["duration_seconds"] = round(elapsed, 3)
             self.report["eta"] = estimate(elapsed, self.baseline, progress, terminal)
+            self.report["duration_seconds"] = self.report["eta"]["elapsed_seconds"]
             write_json(self.path, self.report)
             print(f"ETA {self.label}: {format_eta(self.report['eta'])}", flush=True)
         except Exception:
@@ -197,11 +204,16 @@ class Progress:
         self.path = Path(path) if path else None
         self.unit = unit
         self.last = -math.inf
+        self.extra = {}
 
-    def __call__(self, completed, total):
-        if self.path and (time.monotonic() - self.last >= 5 or completed == total):
+    def set_context(self, **fields):
+        self.extra.update(fields)
+
+    def __call__(self, completed, total, *, force=False, **extra):
+        self.extra.update(extra)
+        if self.path and (force or time.monotonic() - self.last >= 5 or completed == total):
             try:
-                write_json(self.path, dict(completed=completed, total=total, unit=self.unit,
+                write_json(self.path, dict(completed=completed, total=total, unit=self.unit, **self.extra,
                                           updated_at=datetime.now(timezone.utc).isoformat()))
                 self.last = time.monotonic()
             except Exception:

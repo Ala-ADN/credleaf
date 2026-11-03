@@ -1,5 +1,6 @@
 """Run with isolated Airflow Python; loading never touches archives or models."""
 from importlib.metadata import PackageNotFoundError, version
+from datetime import timedelta
 import os
 from pathlib import Path
 import tempfile
@@ -28,9 +29,11 @@ class AirflowDagTests(unittest.TestCase):
     def test_both_dags_load_and_serialize(self):
         from airflow.serialization.serialized_objects import SerializedDAG
         self.assertEqual(self.bag.import_errors, {})
-        self.assertEqual(set(self.bag.dags), {"credleaf_build_corpus", "credleaf_analyze_corpus"})
+        self.assertEqual(set(self.bag.dags), {"credleaf_build_corpus", "credleaf_analyze_corpus", "credleaf_data_catalog"})
         for dag in self.bag.dags.values():
             self.assertIn("dag", SerializedDAG.to_dict(dag))
+            if dag.dag_id == "credleaf_data_catalog":
+                continue
             self.assertEqual(dag.max_active_runs, 1)
             self.assertEqual(dag.max_active_tasks, 4)
             self.assertIsNotNone(dag.on_success_callback)
@@ -45,6 +48,9 @@ class AirflowDagTests(unittest.TestCase):
         self.assertEqual(dag.get_task("collection_flow.georef").pool, "credleaf_models")
         self.assertEqual(dag.get_task("embed").pool, "credleaf_models")
         self.assertEqual(dag.get_task("collection_flow.harvest").pool, "credleaf_archive")
+        self.assertEqual(dag.get_task("collection_flow.normalize").execution_timeout, timedelta(days=14))
+        self.assertEqual(dag.get_task("collection_flow.dedupe").execution_timeout, timedelta(days=7))
+        self.assertEqual(dag.get_task("embed").execution_timeout, timedelta(days=14))
 
     def test_analysis_has_no_archive_work_and_topic_producer_precedes_animation(self):
         dag = self.bag.dags["credleaf_analyze_corpus"]
@@ -54,10 +60,19 @@ class AirflowDagTests(unittest.TestCase):
 
     def test_reporting_covers_every_task_and_does_not_mask_failures(self):
         for dag in self.bag.dags.values():
+            if dag.dag_id == "credleaf_data_catalog":
+                continue
             self.assertEqual(dag.get_task("overview").trigger_rule, "all_done")
             self.assertEqual(dag.get_task("overview").upstream_task_ids, set(dag.task_ids)-{"overview","failure_guard"})
             self.assertEqual(dag.get_task("failure_guard").trigger_rule, "one_failed")
             self.assertEqual(dag.get_task("failure_guard").upstream_task_ids, set(dag.task_ids)-{"failure_guard"})
+
+    def test_catalog_only_declares_observed_inputs(self):
+        dag = self.bag.dags["credleaf_data_catalog"]
+        task = dag.get_task("view_catalog")
+        self.assertEqual(len(task.inlets), 19)
+        self.assertEqual(task.outlets, [])
+        self.assertIsNone(dag.schedule)
 
     def test_params(self):
         from airflow.sdk import Param

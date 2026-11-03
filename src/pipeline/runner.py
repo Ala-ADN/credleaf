@@ -25,8 +25,11 @@ def load_plan(reference):
 
 
 def _worker(plan, stage, cid, config, inputs, output, log_path):
+    artifact_key = digest([config, inputs, plan["implementation"]])
     request = dict(stage=stage, collection_id=cid, config=config, inputs=inputs, output=str(output),
-                   root=plan["root"], code_root=plan["code_root"], resources=plan["resources"], artifact_key=digest([config, inputs, plan["implementation"]]),
+                   root=plan["root"], code_root=plan["code_root"], resources=plan["resources"], artifact_key=artifact_key,
+                   control_path=str(run_directory(plan["root"], plan["dag_id"], plan["run_id"]) / "control/request.json"),
+                   checkpoint_dir=str(Path(plan["root"]) / "data/pipeline/checkpoints" / artifact_key / _key(stage, cid)),
                    progress_path=str(log_path.with_suffix(".progress.json")))
     request_path = log_path.with_suffix(".request.json")
     result_path = log_path.with_suffix(".result.json")

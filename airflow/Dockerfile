@@ -32,6 +32,8 @@ COPY --chown=airflow:0 src ./src
 COPY --chown=airflow:0 scripts ./scripts
 COPY --chown=airflow:0 dags ./dags
 COPY --chown=airflow:0 airflow/start.sh ./airflow/start.sh
+COPY --chown=airflow:0 airflow/plugins /opt/airflow/plugins
+COPY --chown=airflow:0 airflow/catalog ./airflow/catalog
 COPY --chown=airflow:0 notebooks/topic_tree_labels.json ./notebooks/topic_tree_labels.json
 
 ENV CREDLEAF_ROOT=/opt/credleaf \

@@ -85,6 +85,11 @@ also deletes the named Airflow state volume; host research data remains intact.
 
 ## Stage modes and reuse
 
+For progress and ETA, use native run/task **Notes** and the task **XCom** tab
+(`eta`, `coverage`, `disk`). **Assets** tracks verified output versions and date
+coverage. The run's **Pause / Resume** link controls cooperative pausing.
+See [native monitoring](DASHBOARD.md) for field definitions and deployment.
+
 Every stage uses `*_mode` rather than the old `*_enabled` Boolean:
 
 - **`build`** creates a new artifact in staging, validates it and atomically
@@ -106,6 +111,19 @@ code/runtime changes during a run require a new run. Strict reuse binds each
 reused stage to the current code/runtime, so upgrades can require rebuilding
 artifacts. Existing published corpus snapshots remain available for analysis
 under a new analysis implementation without rebuilding their corpus.
+
+Embedding exports stream Qdrant pages directly to aligned `metadata.jsonl` and
+float32 `embeddings.npy` files. `embed_batch_size` controls both writes and export
+pages; export validation checks each block and the final point count without
+loading all vectors or payloads into memory. The NumPy export remains compatible
+with `np.load(..., mmap_mode="r")`.
+
+For all existing captures, use `capture_phase="all"`, `normalize_max_docs=null`
+and `dedupe_max_docs=null`, reuse harvest/registry, and build normalization,
+deduplication and embeddings. Normalization and embedding have 14-day execution
+timeouts; deduplication has seven days. These are task limits, not completion
+estimates. The archive pool still limits concurrency and the shared HTML cache
+avoids refetching cached captures.
 
 To carry verified core files across an adapter/runtime correction without
 fetching or extracting them again, run `scripts/import_corpus.py --snapshot-id

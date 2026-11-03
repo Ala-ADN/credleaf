@@ -59,7 +59,7 @@ CORPUS_SETTINGS = {
     "credibility_timeout": knob(60., "Credibility", "HTTP timeout in seconds.", type="number", exclusiveMinimum=0),
     "credibility_min_seed_domains": knob(1, "Credibility", "Minimum harvested low/mixed domains in the registry.", type="integer", minimum=0),
     "embed_model": knob("BAAI/bge-m3", "Embed", "Encoder ID or immutable local model path; recorded in provenance.", type="string", minLength=1),
-    "embed_batch_size": knob(256, "Embed", "Chunks per Qdrant batch.", type="integer", minimum=1),
+    "embed_batch_size": knob(256, "Embed", "Chunks per Qdrant write batch and export page.", type="integer", minimum=1),
     "georef_max_docs": knob(None, "Georeference", "Document cap per collection.", **LIMIT),
     "georef_model": knob("en_core_web_trf", "Georeference", "Installed spaCy model.", type="string", minLength=1),
     "georef_device": knob("cpu", "Georeference", "Model device.", type="string", enum=["cpu", "cuda"]),

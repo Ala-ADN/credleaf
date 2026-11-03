@@ -14,6 +14,7 @@ import uuid
 from config import PHASES_BY_NAME
 from pipeline.artifacts import ArtifactStore, file_hash, write_json
 from pipeline.timing import Progress
+from pipeline.control import RunControl
 
 
 def execute(request):
@@ -24,6 +25,11 @@ def execute(request):
     store = ArtifactStore(root)
     refs = request["inputs"]
     paths = [store.payload(ref) for ref in refs]
+    progress = Progress(request.get("progress_path"))
+    key = stage if cid is None else f"{stage}__{cid}"
+    control = RunControl(request.get("control_path"), key, progress)
+    if stage != "normalize":
+        control.wait()
     if stage == "harvest":
         from ingest import ArchiveItClient, harvest_all_phases
 
@@ -47,7 +53,14 @@ def execute(request):
             _, stats = normalize_collection(client, cid, phases, raw_root=paths[0] / "captures",
                 output_root=out / "normalized", cache_root=root / "data/cache",
                 use_cache=c["normalize_use_cache"], max_docs=c["normalize_max_docs"],
-                progress=Progress(request.get("progress_path")))
+                progress=progress, control=control, checkpoint_dir=request.get("checkpoint_dir"),
+                checkpoint_identity=(dict(artifact_key=request["artifact_key"], config=c,
+                    capture_sha256=file_hash(paths[0] / "captures" / str(cid) / "captures.jsonl"))
+                    if request.get("checkpoint_dir") else None))
+        if request.get("checkpoint_dir"):
+            adoption = Path(request["checkpoint_dir"]) / "adoption.json"
+            if adoption.exists():
+                stats["checkpoint_adoption"] = json.loads(adoption.read_text())
         ok = sum(value["extracted"] for value in stats["normalization"].values())
         if ok < c["normalize_min_ok"]:
             raise ValueError(f"Extraction quality gate failed: {ok} < {c['normalize_min_ok']} successful documents")
@@ -96,7 +109,7 @@ def execute(request):
             raise ValueError(f"NER quality gate failed: {failed}/{emitted} documents failed")
         return stats
     if stage == "embed":
-        return embed_snapshot(request, paths)
+        return embed_snapshot(request, paths, control=control)
     if stage == "semantic":
         model = store.load(refs[0])["config"]["embed_model"]
         collection = json.loads((paths[0] / "qdrant.json").read_text())["collection"]
@@ -141,12 +154,11 @@ def execute(request):
     raise ValueError(f"Unsupported worker stage: {stage}")
 
 
-def embed_snapshot(request, paths):
+def embed_snapshot(request, paths, *, control=None):
     """One exclusive collection per attempt; publication references it only after verification."""
-    import numpy as np
     from qdrant_client import QdrantClient
     from embed import embed_to_qdrant
-    from analysis.semantic_analysis import load_qdrant_corpus
+    from embed.export import export_qdrant_corpus
 
     c, out = request["config"], Path(request["output"])
     name = f"{c['qdrant_prefix']}_{request['artifact_key'][:16]}_{uuid.uuid4().hex[:12]}"
@@ -161,16 +173,15 @@ def embed_snapshot(request, paths):
             raise ValueError("Refusing to modify an existing Qdrant collection")
         try:
             count = embed_to_qdrant(combined, c["qdrant_url"], name, embedding_model=c["embed_model"],
-                                    batch_size=c["embed_batch_size"], show_progress=True, id_namespace="credleaf_snapshot_v1")
+                                    batch_size=c["embed_batch_size"], show_progress=True, id_namespace="credleaf_snapshot_v1",
+                                    control=control)
             if count < 1 or client.count(collection_name=name, exact=True).count != count:
                 raise ValueError("Embedding count validation failed")
-            metadata, vectors = load_qdrant_corpus(client, name)
-            if len(metadata) != count or not np.isfinite(vectors).all() or (np.linalg.norm(vectors, axis=1) == 0).any():
-                raise ValueError("Invalid embedding export")
-            (out / "input").mkdir()
-            metadata.to_json(out / "input/metadata.jsonl", orient="records", lines=True)
-            np.save(out / "input/embeddings.npy", vectors)
-            stats = dict(collection=name, qdrant_url=c["qdrant_url"], chunks=count, dimension=int(vectors.shape[1]),
+            if control and control.progress:
+                control.progress.unit = "chunks exported"
+            exported = export_qdrant_corpus(client, name, out / "input", expected_count=count,
+                                            batch_size=c["embed_batch_size"], control=control)
+            stats = dict(collection=name, qdrant_url=c["qdrant_url"], **exported,
                          embedding_model=c["embed_model"], point_id_namespace="credleaf_snapshot_v1",
                          torch=version("torch"), chonkie=version("chonkie"))
             write_json(out / "qdrant.json", stats)

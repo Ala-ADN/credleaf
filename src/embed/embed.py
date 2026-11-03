@@ -52,6 +52,7 @@ def embed_to_qdrant(
     batch_size: int = 256,
     show_progress: bool = True,
     id_namespace: str | None = None,
+    control=None,
 ) -> int:
     """Load normalized documents, chunk semantically, and write to Qdrant.
 
@@ -114,6 +115,10 @@ def embed_to_qdrant(
     log.info("Processing normalized documents from %s", normalized_path)
     with normalized_path.open("r", encoding="utf-8") as fh:
         for line_idx, line in enumerate(fh):
+            if control:
+                if control.requested():
+                    flush_batch()
+                control.wait(doc_count, None)
             line = line.strip()
             if not line:
                 continue

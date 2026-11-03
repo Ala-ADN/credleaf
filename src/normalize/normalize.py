@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
+import time
 
 import httpx
 
@@ -37,6 +38,7 @@ class NormalizeStats:
     fetch_failed: int = 0
     extract_failed: int = 0
     empty: int = 0
+    adopted: int = 0
     errors: list[tuple[str, str]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, object]:
@@ -49,6 +51,7 @@ class NormalizeStats:
             "extract_failed": self.extract_failed,
             "empty": self.empty,
             "error_count": len(self.errors),
+            "adopted": self.adopted,
         }
 
 
@@ -132,6 +135,9 @@ def normalize_phase(
     use_cache: bool = True,
     max_docs: int | None = None,
     progress=None,
+    checkpoint_dir=None,
+    checkpoint_identity=None,
+    control=None,
 ) -> tuple[Path, NormalizeStats]:
     """Read a harvest JSONL, fetch+extract each capture, write normalized JSONL."""
     records = list(load_jsonl(captures_jsonl))
@@ -153,15 +159,41 @@ def normalize_phase(
         len(records), captures_jsonl, output_path,
     )
 
-    with output_path.open("w", encoding="utf-8") as fh:
-        for i, rec in enumerate(records):
-            if max_docs is not None and i >= max_docs:
-                break
-            stats.total += 1
-            doc = _process(client, rec, cache_root, use_cache, stats)
-            fh.write(doc.model_dump_json() + "\n")
-            if progress:
-                progress(stats.total, total)
+    journal = None
+    started, prior_seconds = time.monotonic(), 0.
+    try:
+        with output_path.open("w", encoding="utf-8") as fh:
+            if checkpoint_dir is not None:
+                from .checkpoint import DocumentJournal
+                journal = DocumentJournal(checkpoint_dir, checkpoint_identity, records[:total])
+                resumed, saved, errors, prior_seconds = journal.replay(fh)
+                if saved:
+                    for name in stats.__dataclass_fields__:
+                        if name != "errors" and name in saved:
+                            setattr(stats, name, saved[name])
+                    stats.errors = errors
+                started = time.monotonic()
+                if progress and hasattr(progress, "set_context"):
+                    progress.set_context(processing_seconds=prior_seconds, resumed_completed=resumed)
+                if progress:
+                    progress(stats.total, total)
+            for i in range(stats.total, total):
+                rec = records[i]
+                if control:
+                    control.wait(stats.total, total, checkpoint_dir)
+                stats.total += 1
+                doc = _process(client, rec, cache_root, use_cache, stats)
+                active = prior_seconds + time.monotonic() - started - (control.paused_seconds if control else 0.)
+                if journal:
+                    journal.append(i, rec, doc.model_dump(mode="json"), stats.as_dict(), active)
+                fh.write(doc.model_dump_json() + "\n")
+                if progress:
+                    if hasattr(progress, "set_context"):
+                        progress.set_context(processing_seconds=active)
+                    progress(stats.total, total)
+    finally:
+        if journal:
+            journal.close()
 
     log.info("normalize done: %s", stats.as_dict())
     return output_path, stats
@@ -183,6 +215,7 @@ def normalize_collection(
     client: ArchiveItClient, collection_id: int, capture_phases: list[str] | None = None, *,
     raw_root: Path = RAW_DIR / "captures", output_root: Path = PROCESSED_DIR / "normalized",
     cache_root: Path = CACHE_DIR, use_cache: bool = True, max_docs: int | None = None, progress=None,
+    checkpoint_dir=None, checkpoint_identity=None, control=None,
 ) -> tuple[Path, dict]:
     """Normalize a collection; optional capture-window filters are independent of storage.
 
@@ -209,7 +242,8 @@ def normalize_collection(
         source = Path(temporary) / CAPTURES
         write_records(source, captures)
         batch, stats = normalize_phase(client, source, output_path=Path(temporary) / DOCUMENTS,
-            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs, progress=progress)
+            cache_root=cache_root, use_cache=use_cache, max_docs=max_docs, progress=progress,
+            checkpoint_dir=checkpoint_dir, checkpoint_identity=checkpoint_identity, control=control)
         if batch.is_file():
             with batch.open(encoding="utf-8") as stream:
                 records.extend(json.loads(line) for line in stream if line.strip())

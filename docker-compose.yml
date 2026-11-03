@@ -27,6 +27,8 @@ services:
       - ./src:/opt/credleaf/src:ro
       - ./scripts:/opt/credleaf/scripts:ro
       - ./notebooks:/opt/credleaf/notebooks
+      - ./airflow/plugins:/opt/airflow/plugins:ro
+      - ./airflow/catalog:/opt/credleaf/airflow/catalog:ro
     depends_on:
       qdrant:
         condition: service_started

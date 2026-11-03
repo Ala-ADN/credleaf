@@ -42,8 +42,9 @@ def execute(plan_ref, stage, inputs, collection_id=None):
 @task_group
 def collection_flow(collection_id, plan_ref, registry_ref):
     raw = execute.override(task_id="harvest", pool=STAGES["harvest"].pool)(plan_ref, "harvest", [], collection_id)
-    normalized = execute.override(task_id="normalize", pool=STAGES["normalize"].pool)(plan_ref, "normalize", [raw], collection_id)
-    deduped = execute.override(task_id="dedupe")(plan_ref, "dedupe", [normalized], collection_id)
+    normalized = execute.override(task_id="normalize", pool=STAGES["normalize"].pool,
+                                  execution_timeout=timedelta(days=14))(plan_ref, "normalize", [raw], collection_id)
+    deduped = execute.override(task_id="dedupe", execution_timeout=timedelta(days=7))(plan_ref, "dedupe", [normalized], collection_id)
     georef = execute.override(task_id="georef", pool=STAGES["georef"].pool)(plan_ref, "georef", [deduped, registry_ref], collection_id)
     return dict(harvest=raw, normalize=normalized, dedupe=deduped, georef=georef)
 
@@ -116,7 +117,8 @@ See `airflow/README.md` for setup, importing existing data and reuse examples.
     registry = execute.override(task_id="credibility", pool=STAGES["credibility"].pool)(corpus_plan, "credibility", [])
     collection_ids = selected_collections(corpus_plan)
     collections = collection_flow.partial(plan_ref=corpus_plan, registry_ref=registry).expand(collection_id=collection_ids)
-    embedding = execute.override(task_id="embed", pool=STAGES["embed"].pool)(corpus_plan, "embed", collections["dedupe"])
+    embedding = execute.override(task_id="embed", pool=STAGES["embed"].pool,
+                                 execution_timeout=timedelta(days=14))(corpus_plan, "embed", collections["dedupe"])
     publication = publish_corpus(corpus_plan, collections, registry, embedding)
     attach_reporting(build_corpus)
 
