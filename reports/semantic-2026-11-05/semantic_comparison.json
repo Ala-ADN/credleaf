@@ -1,0 +1,40 @@
+{
+  "purpose": "retrospective descriptive semantic EDA; no truth classification or causal inference",
+  "collection": "credleaf_kaggle_9fca5c8a5742_744c285428",
+  "loaded_chunks": 72137,
+  "retained_chunks": 41974,
+  "language": "en",
+  "primary_collections": [
+    13529,
+    13559
+  ],
+  "frequency": "M",
+  "min_words": 8,
+  "deduplication": "exact source URL + whitespace-normalized text within month",
+  "timestamp": "valid publish_date in UTC, otherwise capture_timestamp; analysis phase assigned from event time",
+  "weighting": "chunks, not articles or source-balanced observations",
+  "embedding_dimension": 1024,
+  "embedding_model": "BAAI/bge-m3",
+  "normalization": "L2 raw embeddings; no per-feature standardization",
+  "topics": "one global BERTopic fit across all retained tiers and dates; outlier label -1",
+  "min_topic_size": 50,
+  "min_chunks": 20,
+  "seed": 42,
+  "entropy": "bits among assigned chunks; normalized by log2(global non-outlier topic count)",
+  "cohesion": "chunk-weighted cosine to topic centroid within tier/period",
+  "topic_spread": "unweighted mean pairwise cosine distance of occupied topic centroids",
+  "dispersion": "mean pairwise cosine distance of all retained chunks within tier/period",
+  "nearest_neighbour": "exact same-phase cosine to authoritative chunks, excluding same host; minimum 3 candidates",
+  "registry_sha256": "fcf391aeb7cbf32a2b25d734a43151164467b33ab3e9b369fba0a4971154a8aa",
+  "corpus_sha256": "feb321960911f592dd68ac75e9acdd00761670a48e8653f2356c85a0a95591d4",
+  "packages": {
+    "bertopic": "0.17.4",
+    "hdbscan": "0.8.44",
+    "umap-learn": "0.5.12",
+    "numpy": "2.4.4",
+    "pandas": "3.0.2",
+    "scikit-learn": "1.9.0",
+    "matplotlib": "3.10.9",
+    "pillow": "12.2.0"
+  }
+}

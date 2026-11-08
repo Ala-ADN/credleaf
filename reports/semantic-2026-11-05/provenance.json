@@ -1,0 +1,193 @@
+{
+  "analysis_snapshot_id": "publish-06a76161b081eef9c1bde62b55355897",
+  "animations": {
+    "semantic_comparison.gif": {
+      "bytes": 1440054,
+      "duration_seconds": 19.5,
+      "frames": 39,
+      "size": [
+        1260,
+        720
+      ]
+    },
+    "semantic_evolution.gif": {
+      "bytes": 1155479,
+      "duration_seconds": 25.74,
+      "frames": 39,
+      "size": [
+        1620,
+        945
+      ]
+    }
+  },
+  "artifacts": {
+    "animation": {
+      "collection_id": null,
+      "id": "animation-8deee3a463c0c9486c30939a1293bf15",
+      "sha256": "22217173bc416daf5430630578cbcf35525c48e72696e7d7ce4062a38a5bc36d",
+      "stage": "animation"
+    },
+    "publish": {
+      "collection_id": null,
+      "id": "publish-06a76161b081eef9c1bde62b55355897",
+      "sha256": "7a74791a43171d3a582f456816ac808f081c02f42863560fc3072e8649f5c308",
+      "stage": "publish"
+    },
+    "semantic": {
+      "collection_id": null,
+      "id": "semantic-124006eb60abea21dae3cfac3ef1a368",
+      "sha256": "ce44a4ad6f40cae752ebcf3f7a16188578d2a81f8bc34127a9490aafa1f3ec6e",
+      "stage": "semantic"
+    },
+    "topic": {
+      "collection_id": null,
+      "id": "topic-270893d15c76a3a3401ee48e4ad45c9e",
+      "sha256": "fd2c327e0d522c701ad335c6ab080f90fba0f5d3f449d3e2dd62eb7895e661a7",
+      "stage": "topic"
+    }
+  },
+  "dag_id": "credleaf_analyze_corpus",
+  "date": "2026-11-05",
+  "export_notes": [
+    "Files copied unchanged from verified artifacts except topic_evolution/chunk_provenance.jsonl, which retains only point_id/capture_url/seed_url for portable article counts.",
+    "The full chunk table and embedding arrays remain in the immutable artifact store.",
+    "Topic labels are automatic keywords; historical reviewed labels were not applied."
+  ],
+  "exported_files": {
+    "reports/semantic-2026-11-05/analysis_config.json": {
+      "bytes": 569,
+      "sha256": "265ed04626b7a3836a951d9431ede85b5f72094fcad69434a756d76d027e8b61"
+    },
+    "reports/semantic-2026-11-05/metadata.json": {
+      "bytes": 1753,
+      "sha256": "8881b7780c8c341fc016389ba04b3734373a35029968ccbe87c5bf73c22a213a"
+    },
+    "reports/semantic-2026-11-05/monthly.csv": {
+      "bytes": 16029,
+      "sha256": "def5e68560198aa8673654d06e88182e57fd75d4f0d1f8bd447eafcff68add16"
+    },
+    "reports/semantic-2026-11-05/neighbour_summary.csv": {
+      "bytes": 1643,
+      "sha256": "c54b9da07b23b9327e29ce0d990045a86274a1f976bd0b3a73aa0880428f4959"
+    },
+    "reports/semantic-2026-11-05/neighbours.csv": {
+      "bytes": 5249091,
+      "sha256": "389b99cc1ecf61706276e5a09403916b1a82142bff90bdb953d81b63ee5170fa"
+    },
+    "reports/semantic-2026-11-05/phases.csv": {
+      "bytes": 3176,
+      "sha256": "33a9e42bd90e8281ce489c024d21b9f5d2ad11a16fb72af45e53ba01cd27c9f3"
+    },
+    "reports/semantic-2026-11-05/semantic_comparison.csv": {
+      "bytes": 4748,
+      "sha256": "491d12e659eaa1bdc0a6c1d34171b8a1897c088948f57cb9782026c509cb9eb6"
+    },
+    "reports/semantic-2026-11-05/semantic_comparison.gif": {
+      "bytes": 1440054,
+      "sha256": "3ee73cb29b51e2474a3fc0331578cd097aa8d98d0c57420063d78ee531747971"
+    },
+    "reports/semantic-2026-11-05/semantic_comparison.json": {
+      "bytes": 1753,
+      "sha256": "8881b7780c8c341fc016389ba04b3734373a35029968ccbe87c5bf73c22a213a"
+    },
+    "reports/semantic-2026-11-05/semantic_comparison.png": {
+      "bytes": 224719,
+      "sha256": "e49a6ca64260009ade6f83c89aea08414dcaba52e27332ef45f68c01aab2edb4"
+    },
+    "reports/semantic-2026-11-05/semantic_evolution.csv": {
+      "bytes": 26359,
+      "sha256": "07471e2402ed5e558e926bc65d82a4f7f2ed24e0f66587013ca856e4e342adaa"
+    },
+    "reports/semantic-2026-11-05/semantic_evolution.gif": {
+      "bytes": 1155479,
+      "sha256": "902a1b60ce2d86ca2b60f950171002df8aaa5a6fe572b8d76da337301926e187"
+    },
+    "reports/semantic-2026-11-05/semantic_evolution.json": {
+      "bytes": 2365,
+      "sha256": "fa3a8afd0f5cc7a9d39197bbf156462e86d02b5fdd6507694ab18961dfbb5b9e"
+    },
+    "reports/semantic-2026-11-05/semantic_evolution.png": {
+      "bytes": 223788,
+      "sha256": "2d7c1efadfb27373ce228fea8da31f55bb718e5b05802128726ddb2cabe2250d"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/chunk_provenance.jsonl": {
+      "bytes": 7517272,
+      "sha256": "856dc1dc6827a7a3780a0880fec641c52e4a6485c10e7867bd0020c31c95372b"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/coverage.jsonl": {
+      "bytes": 6297,
+      "sha256": "59a76d27e7e51fe87ede07f084079c1e287fccb8a30c05b7964a62fddcc02392"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/edges.jsonl": {
+      "bytes": 268934,
+      "sha256": "a7653c64b240969c392abfda5ec284e2778e8d65f64796beded27c9e56b9dd37"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/embedding_centroids.npy": {
+      "bytes": 1945728,
+      "sha256": "2a0156b92ca04512046e345f35758caa57af93bdd269624262076b40b20339b7"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/membership.jsonl": {
+      "bytes": 4989630,
+      "sha256": "f198802171a698a37c0a9765a70057afad0d74b16457c9bad7c4d3c69b58ec16"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/metadata.json": {
+      "bytes": 291,
+      "sha256": "99397139dbc3f0367991092b8fd4261865c4eff201b350d784e8a283f060b92c"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/nodes.jsonl": {
+      "bytes": 251893,
+      "sha256": "d1295d9e4f20358dad3d0d37c8fc8d74ad7bd625be78140451df0c13c216b04b"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/vocabulary.json": {
+      "bytes": 283144,
+      "sha256": "5310205078548db1f57ff1da8b049e9745038e7e1983e64dffbcfd172d9fc8de"
+    },
+    "reports/semantic-2026-11-05/topic_evolution/topics/word_distributions.npz": {
+      "bytes": 972141,
+      "sha256": "8edb528a708bfee4f7053854ee4625d37b90b2bb0cb075bec03fea2895814ba5"
+    },
+    "reports/semantic-2026-11-05/topics.json": {
+      "bytes": 432748,
+      "sha256": "d8eb25efff18770a7fe82300d7b2dcf641ca56aecb64307bbe78c2f01a5e5dc0"
+    }
+  },
+  "implementation_source": "664e30f9fe8ae2458129d501689f567eeadaaa356715ab5c791cbbed614a2b26",
+  "run_id": "analysis-kaggle-20261105",
+  "source_artifacts": {
+    "embedding": {
+      "collection_id": null,
+      "id": "embed-2c535b19a11b4849f2ce12c4b03e400b",
+      "sha256": "75ddb601fb421ac2436910726259af498bb73d3e05f3b0e5fb4eabc55550c6b3",
+      "stage": "embed"
+    },
+    "registry": {
+      "collection_id": null,
+      "id": "credibility-17ecbf5bed0609dbfc107989ed56bd5a",
+      "sha256": "8ec8c2a196caf7595be0438626fb206ff477514f5d413b623e061497ce982fad",
+      "stage": "credibility"
+    }
+  },
+  "source_snapshot_id": "publish-a3f864f71ad4ebbd3d9a508af3f93623",
+  "summary": {
+    "date_end": "2023-03-21T03:59:57.000",
+    "date_start": "2020-01-31T00:00:00.000",
+    "edges": 876,
+    "global_topics": 159,
+    "hosts_by_tier": {
+      "authoritative": 63,
+      "low": 20,
+      "mixed": 441
+    },
+    "loaded_chunks": 72137,
+    "monthly_topic_snapshots": 475,
+    "months": 39,
+    "outlier_fraction": 0.298065469099919,
+    "retained_chunks": 41974,
+    "tiers": {
+      "authoritative": 10663,
+      "low": 9697,
+      "mixed": 21614
+    },
+    "unique_page_urls": 593
+  }
+}

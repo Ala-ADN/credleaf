@@ -1,0 +1,76 @@
+{
+  "purpose": "growing primary-parent topic forest with article volume",
+  "input_dir": "/opt/credleaf/data/pipeline/artifacts/topic-270893d15c76a3a3401ee48e4ad45c9e/files",
+  "threshold": 0.55,
+  "displayed_lineages": 12,
+  "total_lineages": 373,
+  "frames": 39,
+  "article_unit": "distinct captured source-page URL without fragment per topic/month",
+  "article_overlap": "one page may belong to multiple topics; repeated chunks/captures counted once",
+  "lineage_rule": "strongest adjacent-window predecessor; best child continues; other children branch",
+  "selection": "article-months times square root of observed months; include every parent lineage",
+  "labels": [
+    {
+      "track_id": "topic:2020-02-01:18",
+      "name": "19 / covid / covid 19",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2020-03-01:12",
+      "name": "coronavirus / 19 / covid",
+      "parent_track": "topic:2020-02-01:18"
+    },
+    {
+      "track_id": "topic:2020-11-01:8",
+      "name": "covid / 19 / covid 19",
+      "parent_track": "topic:2020-02-01:18"
+    },
+    {
+      "track_id": "topic:2020-12-01:46",
+      "name": "covid / 19 / covid 19",
+      "parent_track": "topic:2020-11-01:8"
+    },
+    {
+      "track_id": "topic:2020-12-01:2",
+      "name": "covid / 19 / covid 19",
+      "parent_track": "topic:2020-02-01:18"
+    },
+    {
+      "track_id": "topic:2020-02-01:3",
+      "name": "covid / 19 / covid 19",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2020-02-01:4",
+      "name": "2020 / 11 / news",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2020-02-01:9",
+      "name": "privacy / 2020 / news",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2020-12-01:7",
+      "name": "hands / avoid / water",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2021-05-01:0",
+      "name": "china / government / just",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2021-10-01:1",
+      "name": "covid / 19 / covid 19",
+      "parent_track": null
+    },
+    {
+      "track_id": "topic:2022-09-01:3",
+      "name": "19 / covid / covid 19",
+      "parent_track": null
+    }
+  ],
+  "label_origin": "automatic names from root topic keywords",
+  "limitation": "retrospective display projection; weaker edges/merges omitted; first observation is not necessarily birth"
+}

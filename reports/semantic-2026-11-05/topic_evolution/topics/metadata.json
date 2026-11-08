@@ -1,0 +1,17 @@
+{
+  "config": {
+    "collection_ids": [
+      13529,
+      13559
+    ],
+    "language": "en",
+    "min_words": 8,
+    "topic_min_docs": 50,
+    "topic_min_topic_size": 20,
+    "topic_seed": 42,
+    "topic_threshold": 0.45
+  },
+  "retained_chunks": 41974,
+  "snapshots": 475,
+  "edges": 876
+}
