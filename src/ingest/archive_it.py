@@ -18,15 +18,12 @@ from typing import Any
 import httpx
 
 from .models import Capture, Collection, Seed
+from .pacing import ArchivePacing, ArchiveUnavailable
 
 log = logging.getLogger(__name__)
 
 PARTNER_API = "https://partner.archive-it.org/api"
 WAYBACK_BASE = "https://wayback.archive-it.org"
-
-
-class ArchiveUnavailable(httpx.TransportError):
-    """Transient failures exhausted retries; leave this capture uncommitted."""
 
 
 def retry_after_seconds(value):
@@ -61,12 +58,14 @@ class ArchiveItClient:
         timeout: float = 30.0,
         user_agent: str = "credleaf/0.1 (research; +https://github.com/)",
         request_interval: float = 2.,
+        pacing_path=None,
     ) -> None:
         if request_interval < 0:
             raise ValueError("request_interval must be nonnegative")
         self._minimum_interval = self._interval = request_interval
         self._next_request = 0.
         self._successes = 0
+        self._pacing = ArchivePacing(pacing_path, request_interval) if pacing_path is not None else None
         self._client = httpx.Client(
             timeout=timeout,
             headers={"User-Agent": user_agent, "Accept": "application/json"},
@@ -213,6 +212,8 @@ class ArchiveItClient:
         """
         snap = f"{WAYBACK_BASE}/{collection_id}/{timestamp}id_/{url}"
         for attempt in range(max_retries + 1):
+            if self._pacing:
+                self._interval = self._pacing.acquire()
             wait = self._next_request - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
@@ -221,11 +222,16 @@ class ArchiveItClient:
                 r = self._client.get(snap)
             except httpx.TransportError as exc:
                 if attempt == max_retries:
+                    if self._pacing:
+                        self._pacing.result(transient=True)
                     raise ArchiveUnavailable(f"Archive network unavailable; resume this capture after recovery: {exc}") from exc
                 self._next_request = max(self._next_request, time.monotonic() + backoff_base ** (attempt + 1))
                 log.warning("Archive transport failure; retry %d/%d: %s", attempt + 1, max_retries, exc)
                 continue
             if r.status_code == 429 or 500 <= r.status_code < 600:
+                if self._pacing:
+                    self._pacing.result(transient=True, retry_after=retry_after_seconds(r.headers.get("Retry-After")))
+                    raise ArchiveUnavailable(f"Archive returned {r.status_code}; shared cooldown saved, reschedule capture")
                 self._successes = 0
                 if r.status_code == 429:
                     self._interval = min(60., max(1., self._interval * 1.5))
@@ -240,7 +246,9 @@ class ArchiveItClient:
                 continue
             r.raise_for_status()
             self._successes += 1
-            if self._successes >= 20:
+            if self._pacing:
+                self._interval = self._pacing.result()
+            if not self._pacing and self._successes >= 20:
                 self._interval = max(self._minimum_interval, self._interval * .9)
                 self._successes = 0
             log.info("archive fetched: interval=%.2fs retries=%d bytes=%d", self._interval, attempt, len(r.content))

@@ -115,3 +115,52 @@ def test_permanent_http_failure_is_not_retried(monkeypatch):
         with pytest.raises(httpx.HTTPStatusError):
             client.fetch_capture(1,'20200301000000','https://example.org/')
     assert len(calls)==1
+
+
+def test_shared_cooldown_survives_new_clients_and_does_not_fetch(tmp_path, monkeypatch):
+    from ingest.pacing import ArchivePacing
+    now=[1000.]
+    monkeypatch.setattr('ingest.pacing.time.time',lambda:now[0])
+    path=tmp_path/'pacing.json'
+    calls=[]
+    def respond(req):
+        calls.append(req)
+        return httpx.Response(429)
+    with ArchiveItClient(pacing_path=path) as client:
+        client._client.close()
+        client._client=httpx.Client(transport=httpx.MockTransport(respond))
+        with pytest.raises(ArchiveUnavailable):client.fetch_capture(1,'20200301000000','https://example.org/')
+    state=json.loads(path.read_text())
+    assert state['blocked_until']==1300 and state['interval']==8
+    with ArchiveItClient(pacing_path=path) as second:
+        second._client.close()
+        second._client=httpx.Client(transport=httpx.MockTransport(respond))
+        with pytest.raises(ArchiveUnavailable,match='cooldown'):second.fetch_capture(2,'20200301000000','https://example.org/')
+    assert len(calls)==1
+    now[0]=1301.
+    assert ArchivePacing(path).acquire()==8
+    ArchivePacing(path).result(transient=True,retry_after=900.)
+    assert json.loads(path.read_text())['blocked_until']==2201
+
+
+def test_shared_pacing_recovers_gradually(tmp_path,monkeypatch):
+    from ingest.pacing import ArchivePacing
+    monkeypatch.setattr('ingest.pacing.time.time',lambda:1000.)
+    p=ArchivePacing(tmp_path/'pacing.json')
+    p.result(transient=True)
+    for _ in range(49):p.result()
+    assert json.loads(p.path.read_text())['interval']==8
+    assert p.result()==7.2
+
+
+def test_worker_reports_outage_as_pending_not_failure(tmp_path, monkeypatch):
+    import pipeline.worker as worker
+    from pipeline.artifacts import write_json
+    request=tmp_path/'request.json';result=tmp_path/'result.json'
+    write_json(request,{'stage':'normalize'})
+    monkeypatch.setattr('sys.argv',['worker','--request',str(request),'--result',str(result)])
+    monkeypatch.setattr(worker,'install_shutdown_handlers',lambda:None)
+    def unavailable(_):raise ArchiveUnavailable('cooldown')
+    monkeypatch.setattr(worker,'execute',unavailable)
+    worker.main()
+    assert json.loads(result.read_text())==dict(format=1,stage='normalize',status='pending',detail='cooldown')

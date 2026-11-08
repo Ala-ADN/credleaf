@@ -50,7 +50,8 @@ def execute(request):
         from normalize import normalize_collection
 
         phases = None  # Capture scope is carried by the input artifact, not filenames.
-        with ArchiveItClient(timeout=c["normalize_timeout"], request_interval=c.get("normalize_request_interval", 2.)) as client:
+        with ArchiveItClient(timeout=c["normalize_timeout"], request_interval=c.get("normalize_request_interval", 2.),
+                             pacing_path=root / "data/cache/archive_pacing.json") as client:
             _, stats = normalize_collection(client, cid, phases, raw_root=paths[0] / "captures",
                 output_root=out / "normalized", cache_root=root / "data/cache",
                 use_cache=c["normalize_use_cache"], max_docs=c["normalize_max_docs"],
@@ -233,7 +234,9 @@ def main():
         write_json(args.result, dict(format=1, stage=request["stage"], status="success", stats=stats))
     except StagePending as pending:
         write_json(args.result, dict(format=1, stage=request["stage"], status="pending", detail=str(pending)))
-    except (PipelineInterrupted, ArchiveUnavailable, KeyboardInterrupt) as error:
+    except ArchiveUnavailable as error:
+        write_json(args.result, dict(format=1, stage=request["stage"], status="pending", detail=str(error)))
+    except (PipelineInterrupted, KeyboardInterrupt) as error:
         write_json(args.result, dict(format=1, stage=request["stage"], status="interrupted", error=str(error)))
         raise SystemExit(75)
     except BaseException as error:

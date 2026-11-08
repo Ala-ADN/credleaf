@@ -46,10 +46,19 @@ def embed(plan_ref, inputs):
     return PokeReturnValue(is_done=result is not None, xcom_value=result)
 
 
+@task.sensor(poke_interval=300, timeout=14 * 86400, mode="reschedule")
+def normalize(plan_ref, stage, inputs, collection_id):
+    # A transient archive interruption returns None; the sensor releases the
+    # pool slot and resumes the committed journal without using a failure retry.
+    result = runner.run_stage(plan_ref, stage, list(inputs), collection_id,
+                              attempt=get_current_context()["ti"].try_number)
+    return PokeReturnValue(is_done=result is not None, xcom_value=result)
+
+
 @task_group
 def collection_flow(collection_id, plan_ref, registry_ref):
     raw = execute.override(task_id="harvest", pool=STAGES["harvest"].pool)(plan_ref, "harvest", [], collection_id)
-    normalized = execute.override(task_id="normalize", pool=STAGES["normalize"].pool,
+    normalized = normalize.override(task_id="normalize", pool=STAGES["normalize"].pool,
                                   execution_timeout=timedelta(days=14))(plan_ref, "normalize", [raw], collection_id)
     deduped = execute.override(task_id="dedupe", execution_timeout=timedelta(days=7))(plan_ref, "dedupe", [normalized], collection_id)
     georef = execute.override(task_id="georef", pool=STAGES["georef"].pool)(plan_ref, "georef", [deduped, registry_ref], collection_id)
