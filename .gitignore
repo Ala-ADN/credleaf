@@ -32,3 +32,7 @@ Thumbs.db
 # Env
 .env
 .env.local
+
+# Kaggle authentication (job files live under ignored data/pipeline/)
+kaggle.json
+.kaggle/
