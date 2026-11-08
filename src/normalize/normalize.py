@@ -10,6 +10,7 @@ import tempfile
 import time
 
 import httpx
+from ingest.archive_it import ArchiveUnavailable
 
 from config import CACHE_DIR, PROCESSED_DIR, RAW_DIR, PHASES_BY_NAME
 from document_time import assign_document_time, phase_for_date, parse_timestamp
@@ -108,6 +109,9 @@ def _process(
                 rec.collection_id, rec.capture.timestamp, rec.capture.url
             )
             stats.fetched += 1
+        except ArchiveUnavailable:
+            # No row is committed for an outage: retry the same capture on resume.
+            raise
         except httpx.HTTPError as e:
             stats.fetch_failed += 1
             stats.errors.append((rec.capture.timestamp, str(e)))
@@ -215,7 +219,7 @@ def normalize_collection(
     client: ArchiveItClient, collection_id: int, capture_phases: list[str] | None = None, *,
     raw_root: Path = RAW_DIR / "captures", output_root: Path = PROCESSED_DIR / "normalized",
     cache_root: Path = CACHE_DIR, use_cache: bool = True, max_docs: int | None = None, progress=None,
-    checkpoint_dir=None, checkpoint_identity=None, control=None,
+    checkpoint_dir=None, checkpoint_identity=None, control=None, max_captures_per_url=0,
 ) -> tuple[Path, dict]:
     """Normalize a collection; optional capture-window filters are independent of storage.
 
@@ -235,6 +239,21 @@ def normalize_collection(
         return (phase_for_date(parse_timestamp(timestamp, capture=True))
                 or record.get("capture_phase") or record.get("phase"))
     captures = [r for r in load_records(raw, CAPTURES) if selected is None or capture_phase(r) in selected]
+    input_captures = len(captures)
+    if max_captures_per_url < 0:
+        raise ValueError("max_captures_per_url must be nonnegative")
+    if max_captures_per_url:
+        from collections import Counter
+        from url_utils import canonical_url
+        counts = Counter()
+        retained = []
+        # Earliest captures first, independent of imported file ordering.
+        for record in sorted(captures, key=lambda r: (r["capture"]["timestamp"], r["capture"]["url"], str(r["seed_id"]))):
+            key = (canonical_url(record["capture"]["url"]) or record["capture"]["url"], capture_phase(record))
+            if counts[key] < max_captures_per_url:
+                retained.append(record)
+                counts[key] += 1
+        captures = retained
     output = output_root / str(collection_id)
     records = ([r for r in load_records(output) if capture_phase(r) not in selected]
                if selected is not None and selected != set(PHASES_BY_NAME) else [])
@@ -249,4 +268,6 @@ def normalize_collection(
                 records.extend(json.loads(line) for line in stream if line.strip())
     summary = write_collection(records, output)
     summary["normalization"] = {"collection": stats.as_dict()}
+    summary["capture_selection"] = dict(input_captures=input_captures, selected_captures=len(captures),
+        max_captures_per_url=max_captures_per_url, scope="canonical URL per capture phase", selection="earliest capture")
     return output, summary

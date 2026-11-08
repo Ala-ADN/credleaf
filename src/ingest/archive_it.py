@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from collections.abc import Iterator
 from typing import Any
 
@@ -21,6 +23,22 @@ log = logging.getLogger(__name__)
 
 PARTNER_API = "https://partner.archive-it.org/api"
 WAYBACK_BASE = "https://wayback.archive-it.org"
+
+
+class ArchiveUnavailable(httpx.TransportError):
+    """Transient failures exhausted retries; leave this capture uncommitted."""
+
+
+def retry_after_seconds(value):
+    if not value:
+        return 0.
+    try:
+        return max(0., float(value))
+    except ValueError:
+        try:
+            return max(0., (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds())
+        except (ValueError, TypeError, OverflowError):
+            return 0.
 
 CDX_FIELDS = (
     "urlkey",
@@ -42,7 +60,13 @@ class ArchiveItClient:
         self,
         timeout: float = 30.0,
         user_agent: str = "credleaf/0.1 (research; +https://github.com/)",
+        request_interval: float = 2.,
     ) -> None:
+        if request_interval < 0:
+            raise ValueError("request_interval must be nonnegative")
+        self._minimum_interval = self._interval = request_interval
+        self._next_request = 0.
+        self._successes = 0
         self._client = httpx.Client(
             timeout=timeout,
             headers={"User-Agent": user_agent, "Accept": "application/json"},
@@ -189,22 +213,37 @@ class ArchiveItClient:
         """
         snap = f"{WAYBACK_BASE}/{collection_id}/{timestamp}id_/{url}"
         for attempt in range(max_retries + 1):
-            r = self._client.get(snap)
-            if r.status_code == 429 or 500 <= r.status_code < 600:
+            wait = self._next_request - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            self._next_request = time.monotonic() + self._interval
+            try:
+                r = self._client.get(snap)
+            except httpx.TransportError as exc:
                 if attempt == max_retries:
-                    r.raise_for_status()
-                retry_after = r.headers.get("Retry-After")
-                delay = (
-                    float(retry_after) if retry_after and retry_after.isdigit()
-                    else backoff_base ** (attempt + 1)
-                )
+                    raise ArchiveUnavailable(f"Archive network unavailable; resume this capture after recovery: {exc}") from exc
+                self._next_request = max(self._next_request, time.monotonic() + backoff_base ** (attempt + 1))
+                log.warning("Archive transport failure; retry %d/%d: %s", attempt + 1, max_retries, exc)
+                continue
+            if r.status_code == 429 or 500 <= r.status_code < 600:
+                self._successes = 0
+                if r.status_code == 429:
+                    self._interval = min(60., max(1., self._interval * 1.5))
+                if attempt == max_retries:
+                    raise ArchiveUnavailable(f"Archive returned {r.status_code} after retries; resume after cooldown")
+                delay = max(self._interval, retry_after_seconds(r.headers.get("Retry-After")), backoff_base ** (attempt + 1))
                 log.info(
                     "fetch %s: %d, sleeping %.1fs (attempt %d/%d)",
                     snap, r.status_code, delay, attempt + 1, max_retries,
                 )
-                time.sleep(delay)
+                self._next_request = max(self._next_request, time.monotonic() + delay)
                 continue
             r.raise_for_status()
+            self._successes += 1
+            if self._successes >= 20:
+                self._interval = max(self._minimum_interval, self._interval * .9)
+                self._successes = 0
+            log.info("archive fetched: interval=%.2fs retries=%d bytes=%d", self._interval, attempt, len(r.content))
             return r.content
         # unreachable
         raise RuntimeError("retry loop exited without returning")

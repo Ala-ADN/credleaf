@@ -15,6 +15,7 @@ from config import PHASES_BY_NAME
 from pipeline.artifacts import ArtifactStore, file_hash, write_json
 from pipeline.timing import Progress
 from pipeline.control import RunControl, PipelineInterrupted, install_shutdown_handlers
+from ingest.archive_it import ArchiveUnavailable
 
 
 def execute(request):
@@ -49,10 +50,11 @@ def execute(request):
         from normalize import normalize_collection
 
         phases = None  # Capture scope is carried by the input artifact, not filenames.
-        with ArchiveItClient(timeout=c["normalize_timeout"]) as client:
+        with ArchiveItClient(timeout=c["normalize_timeout"], request_interval=c.get("normalize_request_interval", 2.)) as client:
             _, stats = normalize_collection(client, cid, phases, raw_root=paths[0] / "captures",
                 output_root=out / "normalized", cache_root=root / "data/cache",
                 use_cache=c["normalize_use_cache"], max_docs=c["normalize_max_docs"],
+                max_captures_per_url=c.get("capture_max_per_url", 0),
                 progress=progress, control=control, checkpoint_dir=request.get("checkpoint_dir"),
                 checkpoint_identity=(dict(artifact_key=request["artifact_key"], config=c,
                     capture_sha256=file_hash(paths[0] / "captures" / str(cid) / "captures.jsonl"))
@@ -231,7 +233,7 @@ def main():
         write_json(args.result, dict(format=1, stage=request["stage"], status="success", stats=stats))
     except StagePending as pending:
         write_json(args.result, dict(format=1, stage=request["stage"], status="pending", detail=str(pending)))
-    except (PipelineInterrupted, KeyboardInterrupt) as error:
+    except (PipelineInterrupted, ArchiveUnavailable, KeyboardInterrupt) as error:
         write_json(args.result, dict(format=1, stage=request["stage"], status="interrupted", error=str(error)))
         raise SystemExit(75)
     except BaseException as error:

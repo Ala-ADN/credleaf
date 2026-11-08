@@ -51,6 +51,7 @@ CORPUS_SETTINGS = {
     "normalize_max_docs": knob(None, "Normalize", "Document cap per collection, isolated to this snapshot.", **LIMIT),
     "normalize_use_cache": knob(True, "Normalize", "Use shared HTML cache.", type="boolean"),
     "normalize_timeout": knob(60., "Normalize", "HTTP timeout in seconds.", type="number", exclusiveMinimum=0),
+    "normalize_request_interval": knob(2., "Normalize", "Initial minimum seconds between archive requests; adapts on throttling.", type="number", exclusiveMinimum=0),
     "normalize_min_ok": knob(1, "Normalize", "Minimum successfully extracted documents per collection.", type="integer", minimum=0),
     "normalize_max_error_fraction": knob(0., "Normalize", "Maximum fraction of fetch/extraction failures.", type="number", minimum=0, maximum=1),
     "dedupe_max_docs": knob(None, "Dedupe", "Input cap per collection.", **LIMIT),
@@ -124,6 +125,8 @@ def stage_config(stage, params, resources):
         config["corpus_layout"] = "collection-v1"
     if stage == "harvest":
         config["capture_phase"] = params["capture_phase"]
+    if stage == "normalize":
+        config["capture_max_per_url"] = params["harvest_max_captures_per_url"]
     if stage == "embed":
         config.update(qdrant_url=params["qdrant_url"], qdrant_prefix=params["qdrant_prefix"])
         if params.get("embed_backend", "local") == "kaggle":
