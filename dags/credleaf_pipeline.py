@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 from airflow.sdk import DAG, Param, get_current_context, task, task_group
+from airflow.sdk.bases.sensor import PokeReturnValue
 
 ROOT = Path(os.environ.get("CREDLEAF_ROOT", Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(ROOT / "src"))
@@ -37,6 +38,12 @@ def selected_collections(plan_ref):
 def execute(plan_ref, stage, inputs, collection_id=None):
     return runner.run_stage(plan_ref, stage, list(inputs), collection_id,
                             attempt=get_current_context()["ti"].try_number)
+
+
+@task.sensor(poke_interval=120, timeout=14 * 86400, mode="reschedule")
+def embed(plan_ref, inputs):
+    result = support.embed(plan_ref, inputs, get_current_context())
+    return PokeReturnValue(is_done=result is not None, xcom_value=result)
 
 
 @task_group
@@ -102,6 +109,8 @@ or turn off optional geography/embedding. Reuse checks file hashes, source input
 configuration, code and Python package versions before archive/model work starts.
 Changing a capture window creates a new scoped snapshot; live files are never merged.
 
+The embed task selects local execution or Kaggle GPUs with `embed_backend`.
+Kaggle waits release the worker between polls; `embed_mode` still controls build/reuse/off.
 Embedding uses an exclusive new Qdrant collection and saves a verified offline
 metadata/vector export. A failed build never replaces a previous published corpus.
 The `publish_corpus` return value contains the snapshot ID for the analysis DAG.
@@ -117,8 +126,8 @@ See `airflow/README.md` for setup, importing existing data and reuse examples.
     registry = execute.override(task_id="credibility", pool=STAGES["credibility"].pool)(corpus_plan, "credibility", [])
     collection_ids = selected_collections(corpus_plan)
     collections = collection_flow.partial(plan_ref=corpus_plan, registry_ref=registry).expand(collection_id=collection_ids)
-    embedding = execute.override(task_id="embed", pool=STAGES["embed"].pool,
-                                 execution_timeout=timedelta(days=14))(corpus_plan, "embed", collections["dedupe"])
+    embedding = embed.override(pool=STAGES["embed"].pool,
+                               execution_timeout=timedelta(days=14))(corpus_plan, collections["dedupe"])
     publication = publish_corpus(corpus_plan, collections, registry, embedding)
     attach_reporting(build_corpus)
 

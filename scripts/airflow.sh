@@ -11,6 +11,8 @@ export CREDLEAF_PYTHON="${CREDLEAF_PYTHON:-$project_root/.venv/bin/python}"
 export PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}"
 if [[ "${1:-}" == "standalone" ]]; then
   export CREDLEAF_AIRFLOW_BIN="$project_root/.venv-airflow/bin/airflow"
+  export CREDLEAF_AIRFLOW_PYTHON="$project_root/.venv-airflow/bin/python"
+  export AIRFLOW__CORE__PLUGINS_FOLDER="$project_root/airflow/plugins"
   exec bash "$project_root/airflow/start.sh"
 fi
 exec "$project_root/.venv-airflow/bin/airflow" "$@"

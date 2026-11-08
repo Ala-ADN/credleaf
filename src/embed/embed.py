@@ -53,6 +53,8 @@ def embed_to_qdrant(
     show_progress: bool = True,
     id_namespace: str | None = None,
     control=None,
+    checkpoint=None,
+    total_documents=None,
 ) -> int:
     """Load normalized documents, chunk semantically, and write to Qdrant.
 
@@ -93,16 +95,34 @@ def embed_to_qdrant(
             "collection with --collection-name credleaf_dedup_v2; legacy IDs cannot be repaired by upserting."
         )
 
+    seen_chunks = set()
+    if checkpoint:
+        actual = handshake.client.count(collection_name=collection_name, exact=True).count
+        if actual < checkpoint.state["chunks"]:
+            raise ValueError("Qdrant lost committed checkpoint vectors; restore its persistent data before resuming")
+        if checkpoint.state["embedding_complete"]:
+            if actual != checkpoint.state["chunks"]:
+                raise ValueError("Completed checkpoint collection changed")
+            return actual
+        offset = None
+        while actual:
+            points, offset = handshake.client.scroll(collection_name=collection_name, offset=offset,
+                limit=batch_size, with_payload=False, with_vectors=False)
+            seen_chunks.update(str(point.id) for point in points)
+            if offset is None:
+                break
+        if len(seen_chunks) != actual:
+            raise ValueError("Could not verify checkpoint collection point identities")
+
     # Initialize semantic chunker
     chunker = SemanticChunker()
     log.info("Initialized SemanticChunker")
 
     # Load and process normalized documents
-    doc_count = 0
-    chunk_count = 0
+    doc_count = checkpoint.state["documents"] if checkpoint else 0
+    chunk_count = len(seen_chunks)
     batch_chunks = []
     batch_bytes = 0
-    seen_chunks = set()
 
     def flush_batch() -> None:
         if not batch_chunks:
@@ -112,15 +132,27 @@ def embed_to_qdrant(
         nonlocal batch_bytes
         batch_bytes = 0
 
+    def commit(next_line):
+        if checkpoint:
+            flush_batch()
+            checkpoint.save(next_line, doc_count, chunk_count)
+        if control and getattr(control, "progress", None):
+            control.progress(doc_count, total_documents)
+
     log.info("Processing normalized documents from %s", normalized_path)
+    next_line = checkpoint.state["next_line"] if checkpoint else 0
     with normalized_path.open("r", encoding="utf-8") as fh:
         for line_idx, line in enumerate(fh):
+            if checkpoint and line_idx < checkpoint.state["next_line"]:
+                continue
+            next_line = line_idx + 1
             if control:
                 if control.requested():
                     flush_batch()
-                control.wait(doc_count, None)
+                control.wait(doc_count, total_documents, checkpoint.directory if checkpoint else None)
             line = line.strip()
             if not line:
+                commit(next_line)
                 continue
 
             doc = assign_document_time(json.loads(line))
@@ -129,16 +161,19 @@ def embed_to_qdrant(
             # Skip documents that weren't successfully extracted
             if doc.get("fetch_status") != "ok":
                 log.debug("Skipping doc %d (status=%s)", doc_count, doc.get("fetch_status"))
+                commit(next_line)
                 continue
 
             text = (doc.get("text") or "").strip()
             if not text:
                 log.debug("Skipping doc %d (empty text)", doc_count)
+                commit(next_line)
                 continue
 
             # Semantically chunk the text
             chunks = chunker.chunk(text)
             if not chunks:
+                commit(next_line)
                 continue
 
             document_hash = content_hash(text)
@@ -202,8 +237,11 @@ def embed_to_qdrant(
 
             if show_progress and doc_count % 100 == 0:
                 log.info("Processed %d documents, wrote %d chunks", doc_count, chunk_count)
+            commit(next_line)
 
     flush_batch()
+    if checkpoint:
+        checkpoint.save(next_line, doc_count, chunk_count, complete=True)
 
     log.info(
         "Processing complete: %d documents, %d chunks written to Qdrant",

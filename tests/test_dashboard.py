@@ -120,3 +120,39 @@ def test_native_summary_does_not_turn_stage_eta_into_workflow_eta(tmp_path, monk
     note = note_summary(run, dict(free=20*1024**3, total=100*1024**3), "2026-11-02T00:01:00Z")
     assert "at least" in note and "steps unestimated" in note
     assert "Disk free: 20.0 GiB" in note
+
+
+def test_progress_panel_uses_real_counts_and_explicit_unknown_stale_paused_states(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(MODULE.parents[1]))
+    from credleaf_ui.progress import payload
+    fixture(tmp_path)
+    run = data.collect(tmp_path, now=datetime(2026, 11, 2, 0, 1, tzinfo=timezone.utc))["runs"][0]
+    value = payload(run, "2026-11-02T00:01:00Z")
+    normalized = next(s for s in value["steps"] if s["key"] == "normalize__13529")
+    assert normalized["percent"] == 30 and normalized["remaining_seconds"] == 90
+    assert value["stages"] == dict(completed=1, total=7)
+    assert next(s for s in value["steps"] if s["key"] == "dedupe__13529")["percent"] is None
+    assert normalized["task_url"].endswith("/tasks/collection_flow.normalize/mapped/0")
+    step = next(s for s in run["stages"] if s["stage"] == "normalize")
+    step["progress"] = {}
+    step["eta"]["stale"] = True
+    stale = next(s for s in payload(run, "now")["steps"] if s["key"] == step["key"])
+    assert stale["percent"] is None and stale["remaining_seconds"] is None and not stale["indeterminate"]
+    step["eta"]["stale"] = False
+    assert next(s for s in payload(run, "now")["steps"] if s["key"] == step["key"])["indeterminate"]
+    run["control"] = dict(pause_requested=True)
+    paused = next(s for s in payload(run, "now")["steps"] if s["key"] == step["key"])
+    assert paused["paused"] and paused["remaining_seconds"] is None and not paused["indeterminate"]
+
+
+def test_progress_collector_reads_only_requested_run_and_latest_sidecar(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(MODULE.parents[1]))
+    directory = fixture(tmp_path)
+    report = json.loads((directory / "steps/normalize__13529.json").read_text())
+    report["log"] = str(directory / "normalize.attempt-1.log")
+    (directory / "steps/normalize__13529.json").write_text(json.dumps(report))
+    (directory / "normalize.attempt-1.progress.json").write_text(json.dumps(dict(completed=8, total=10)))
+    run = data.collect(tmp_path, plan_paths=[directory / "plan.json"])["runs"][0]
+    assert next(s for s in run["stages"] if s["stage"] == "normalize")["progress"]["completed"] == 8
+    assert run["normalization"]["completed"] == 8
+    assert data.collect(tmp_path, plan_paths=[])["runs"] == []

@@ -59,7 +59,14 @@ CORPUS_SETTINGS = {
     "credibility_timeout": knob(60., "Credibility", "HTTP timeout in seconds.", type="number", exclusiveMinimum=0),
     "credibility_min_seed_domains": knob(1, "Credibility", "Minimum harvested low/mixed domains in the registry.", type="integer", minimum=0),
     "embed_model": knob("BAAI/bge-m3", "Embed", "Encoder ID or immutable local model path; recorded in provenance.", type="string", minLength=1),
+    "embed_backend": knob("local", "Embed", "Where the embed task builds vectors.", type="string", enum=["local", "kaggle"]),
     "embed_batch_size": knob(256, "Embed", "Chunks per Qdrant write batch and export page.", type="integer", minimum=1),
+    "kaggle_connection_id": knob("kaggle_default", "Kaggle", "Airflow Connection with Login=username and Password=API token; Extra auth_type=token or legacy.", type="string", minLength=1),
+    "kaggle_revision": knob("main", "Kaggle", "Public encoder revision; resolved to an immutable commit before upload.", type="string", minLength=1),
+    "kaggle_shard_documents": knob(2000, "Kaggle", "Successfully extracted documents per GPU job.", type="integer", minimum=1),
+    "kaggle_encode_batch_size": knob(16, "Kaggle", "Chunks encoded together on the GPU.", type="integer", minimum=1),
+    "kaggle_accelerator": knob("NvidiaTeslaT4", "Kaggle", "Requested Kaggle accelerator.", type="string", minLength=1),
+    "kaggle_kernel_timeout": knob(39600, "Kaggle", "Maximum remote runtime per shard in seconds.", type="integer", minimum=600, maximum=43200),
     "georef_max_docs": knob(None, "Georeference", "Document cap per collection.", **LIMIT),
     "georef_model": knob("en_core_web_trf", "Georeference", "Installed spaCy model.", type="string", minLength=1),
     "georef_device": knob("cpu", "Georeference", "Model device.", type="string", enum=["cpu", "cuda"]),
@@ -119,6 +126,9 @@ def stage_config(stage, params, resources):
         config["capture_phase"] = params["capture_phase"]
     if stage == "embed":
         config.update(qdrant_url=params["qdrant_url"], qdrant_prefix=params["qdrant_prefix"])
+        if params.get("embed_backend", "local") == "kaggle":
+            config.update({key: value for key, value in params.items()
+                           if key.startswith("kaggle_") and key != "kaggle_connection_id"})
     if stage == "georef":
         config["gazetteer_sha256"] = resources["gazetteer_sha256"]
     if stage in {"semantic", "topic"}:

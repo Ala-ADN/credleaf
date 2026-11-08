@@ -85,6 +85,8 @@ def run_coverage(run):
 def operational_status(run, step=None):
     if run.get("superseded_by"):
         return "superseded by " + run["superseded_by"]
+    if run.get("control", {}).get("shutdown_requested"):
+        return "saving progress for shutdown; resumes after restart"
     if run.get("control", {}).get("pause_requested"):
         if step and step["status"] in {"success", "cached", "reused", "off", "skipped"}:
             return step["status"]

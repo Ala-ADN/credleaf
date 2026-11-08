@@ -3,9 +3,12 @@ from importlib.metadata import PackageNotFoundError, version
 from datetime import timedelta
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 try:
     version("apache-airflow")
@@ -73,6 +76,64 @@ class AirflowDagTests(unittest.TestCase):
         self.assertEqual(len(task.inlets), 19)
         self.assertEqual(task.outlets, [])
         self.assertIsNone(dag.schedule)
+
+    def test_embed_has_both_backends_and_reschedules_before_publication(self):
+        dag = self.bag.dags["credleaf_build_corpus"]
+        wait = dag.get_task("embed")
+        publish = dag.get_task("publish_corpus")
+        self.assertEqual(wait.mode, "reschedule")
+        self.assertEqual(wait.poke_interval, 120)
+        self.assertIn("embed", publish.upstream_task_ids)
+        self.assertEqual(wait.upstream_task_ids, {"prepare_corpus", "collection_flow.dedupe"})
+        self.assertEqual(dag.params["embed_backend"], "local")
+        self.assertEqual(dag.params.get_param("embed_backend").schema["enum"], ["local", "kaggle"])
+        self.assertNotIn("kaggle_api_token", dag.params)
+
+    def test_embed_local_off_and_reuse_do_not_read_kaggle_credentials(self):
+        from pipeline import airflow_support as support
+        context = dict(ti=SimpleNamespace(try_number=2))
+        for backend, mode in (("local", "build"), ("kaggle", "off"), ("kaggle", "reuse")):
+            with self.subTest(backend=backend, mode=mode), \
+                 patch.object(support.runner, "load_plan", return_value=dict(parameters=dict(embed_backend=backend, embed_mode=mode))), \
+                 patch.object(support.runner, "run_stage", return_value={"id": "fixture"}) as run, \
+                 patch("airflow.sdk.BaseHook.get_connection") as connection:
+                self.assertEqual(support.embed({}, [], context), {"id": "fixture"})
+                connection.assert_not_called()
+                run.assert_called_once_with({}, "embed", [], attempt=2, worker_env=None)
+
+    def test_embed_kaggle_waits_for_credentials_and_passes_them_only_to_worker(self):
+        from airflow.exceptions import AirflowNotFoundException
+        from pipeline import airflow_support as support
+        params = dict(embed_backend="kaggle", embed_mode="build", kaggle_connection_id="kaggle_default")
+        context = dict(ti=SimpleNamespace(try_number=1))
+        with patch.object(support.runner, "load_plan", return_value=dict(parameters=params)), \
+             patch.object(support.runner, "run_stage", return_value={"id": "fixture"}) as run, \
+             patch("airflow.sdk.BaseHook.get_connection") as connection:
+            connection.side_effect = AirflowNotFoundException("missing")
+            self.assertIsNone(support.embed({}, [], context))
+            connection.side_effect = None
+            connection.return_value = SimpleNamespace(login="tester", password="", extra_dejson={})
+            self.assertIsNone(support.embed({}, [], context))
+            run.assert_not_called()
+            connection.return_value.password = "secret-token"
+            self.assertEqual(support.embed({}, [], context), {"id": "fixture"})
+            environment = run.call_args.kwargs["worker_env"]
+            self.assertEqual(environment["KAGGLE_API_TOKEN"], "secret-token")
+            self.assertEqual(environment["CREDLEAF_KAGGLE_OWNER"], "tester")
+            self.assertNotIn("secret-token", str(run.call_args.args))
+
+    def test_plugin_discovery_does_not_execute_helper_cli(self):
+        root = Path(__file__).resolve().parents[1]
+        code = """
+from airflow import plugins_manager
+plugins_manager.ensure_plugins_loaded()
+assert not plugins_manager.import_errors, plugins_manager.import_errors
+assert 'credleaf_monitoring' in {p.name for p in plugins_manager.plugins}
+"""
+        result = subprocess.run([sys.executable, "-c", code], text=True, capture_output=True,
+            env=dict(os.environ, AIRFLOW__CORE__PLUGINS_FOLDER=str(root / "airflow/plugins"),
+                     PYTHONPATH=os.pathsep.join([str(root / "src"), str(root / "airflow/plugins")])) )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_params(self):
         from airflow.sdk import Param

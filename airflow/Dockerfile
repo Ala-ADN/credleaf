@@ -11,6 +11,8 @@ RUN apt-get update \
     && chown airflow:0 /opt/credleaf /opt/credleaf-venv \
     && chmod g+w /opt/credleaf /opt/credleaf-venv
 COPY --from=uv /uv /usr/local/bin/uv
+RUN uv venv /opt/kaggle-cli --python /usr/local/bin/python \
+    && uv pip install --no-cache --python /opt/kaggle-cli/bin/python kaggle==2.2.5 six==1.17.0
 
 USER airflow
 WORKDIR /opt/credleaf
@@ -37,6 +39,7 @@ COPY --chown=airflow:0 airflow/catalog ./airflow/catalog
 COPY --chown=airflow:0 notebooks/topic_tree_labels.json ./notebooks/topic_tree_labels.json
 
 ENV CREDLEAF_ROOT=/opt/credleaf \
+    CREDLEAF_KAGGLE_BIN=/opt/kaggle-cli/bin/kaggle \
     CREDLEAF_PYTHON=/opt/credleaf-venv/bin/python \
     PYTHONPATH=/opt/credleaf/src \
     AIRFLOW__CORE__DAGS_FOLDER=/opt/credleaf/dags \

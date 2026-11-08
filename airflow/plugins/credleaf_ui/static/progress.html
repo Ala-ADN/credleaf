@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Run progress</title>
+  <link rel="stylesheet" href="/credleaf/static/progress.css">
+  <script type="module" src="/credleaf/static/progress.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Run progress</h1><p id="run-state">Waiting for progress…</p></div>
+      <span id="connection" role="status">Connecting…</span>
+    </header>
+    <p id="notice" role="status" hidden></p>
+    <section class="summary" aria-label="Run summary">
+      <div class="summary-label"><strong>Stages finished</strong><span id="stage-count">—</span></div>
+      <progress id="stage-progress" max="100" value="0" aria-label="Stages finished"></progress>
+      <p id="normalization" hidden></p>
+    </section>
+    <section id="steps" aria-label="Task progress"></section>
+    <footer>Updates every 5 seconds. Stage completion does not measure elapsed work.</footer>
+  </main>
+</body>
+</html>

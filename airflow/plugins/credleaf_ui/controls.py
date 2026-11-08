@@ -31,20 +31,30 @@ def control_run(root, dag_id, run_id, pause):
         with create_session() as session:
             run = session.query(DagRun).filter_by(dag_id=dag_id, run_id=run_id).one_or_none()
             previous = json.loads(path.read_text()) if path.exists() else {}
-            recover = run is not None and run.state == "failed" and not pause and previous.get("pause_requested")
+            interrupted = any(json.loads(p.read_text()).get("status") == "interrupted" for p in (directory / "steps").glob("*.json"))
+            recover = run is not None and run.state == "failed" and not pause and (previous.get("pause_requested") or interrupted)
             if run is None or (run.state not in {"running", "queued"} and not recover):
                 raise ValueError("Only active workflows or interrupted paused workflows can resume")
             if not pause and implementation(Path(root)) != plan["implementation"]["source"]:
                 raise ValueError("Scientific code changed; migrate the saved checkpoint to a new plan before resuming")
+            if not pause and previous.get("shutdown_requested"):
+                raise ValueError("The service is shutting down; this run will recover after Airflow restarts")
             if recover:
                 acks = [json.loads(p.read_text()) for p in path.parent.glob("*.json") if p.name not in {"prepare.json", "request.json"}]
-                if not any(a.get("status") == "paused" and a.get("checkpoint") and a.get("request_id") == previous.get("request_id") for a in acks):
+                if not interrupted and not any(a.get("status") == "paused" and a.get("checkpoint") and a.get("request_id") == previous.get("request_id") for a in acks):
                     raise ValueError("No durable paused checkpoint is available for recovery")
                 tasks = session.query(TaskInstance).filter_by(dag_id=dag_id, run_id=run_id).all()
                 if any(t.state == "running" for t in tasks):
                     raise ValueError("Wait for the interrupted worker to stop before recovering")
-                clear_task_instances([t for t in tasks if t.state != "success"], session=session)
-            value = dict(pause_requested=pause, updated_at=datetime.now(timezone.utc).isoformat(),
+                if interrupted:
+                    from credleaf_ui.lifecycle import recovery_tasks, reports
+                    selected = recovery_tasks(tasks, reports(directory, plan))
+                    if not selected:
+                        raise ValueError("This run also has a genuine failure; inspect that task before retrying")
+                else:
+                    selected = [t for t in tasks if t.state != "success"]
+                clear_task_instances(selected, session=session)
+            value = dict(previous, pause_requested=pause, updated_at=datetime.now(timezone.utc).isoformat(),
                          request_id=(previous.get("request_id") if previous.get("pause_requested") == pause
                                      else uuid.uuid4().hex),
                          run_id=run_id, dag_id=dag_id)

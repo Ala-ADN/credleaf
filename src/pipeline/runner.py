@@ -11,6 +11,7 @@ from pipeline.artifacts import ArtifactStore, digest, file_hash, implementation,
 from pipeline.plan import run_directory, runtime_identity
 from pipeline.spec import STAGES, stage_config
 from pipeline.timing import Tracker, format_eta
+from pipeline.control import PipelineInterrupted
 
 
 def _key(stage, cid=None):
@@ -24,7 +25,7 @@ def load_plan(reference):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _worker(plan, stage, cid, config, inputs, output, log_path):
+def _worker(plan, stage, cid, config, inputs, output, log_path, *, environment=None):
     artifact_key = digest([config, inputs, plan["implementation"]])
     request = dict(stage=stage, collection_id=cid, config=config, inputs=inputs, output=str(output),
                    root=plan["root"], code_root=plan["code_root"], resources=plan["resources"], artifact_key=artifact_key,
@@ -34,7 +35,8 @@ def _worker(plan, stage, cid, config, inputs, output, log_path):
     request_path = log_path.with_suffix(".request.json")
     result_path = log_path.with_suffix(".result.json")
     write_json(request_path, request)
-    env = dict(os.environ, PYTHONPATH=str(Path(plan["code_root"]) / "src"), MPLBACKEND="Agg",
+    env = dict(os.environ if environment is None else environment)
+    env.update(PYTHONPATH=str(Path(plan["code_root"]) / "src"), MPLBACKEND="Agg",
                CREDLEAF_DATA_DIR=str(output), CREDLEAF_CACHE_DIR=str(Path(plan["root"]) / "data/cache"))
     process = subprocess.Popen([plan["python"], "-u", "-m", "pipeline.worker", "--request", str(request_path),
                                 "--result", str(result_path)], env=env, cwd=plan["root"], stdout=subprocess.PIPE,
@@ -45,18 +47,23 @@ def _worker(plan, stage, cid, config, inputs, output, log_path):
                 print(line, end="", flush=True)
                 log.write(line)
         if process.wait():
-            detail = json.loads(result_path.read_text()).get("error") if result_path.exists() else "No worker result"
+            result = json.loads(result_path.read_text()) if result_path.exists() else {}
+            if result.get("status") == "interrupted" or process.returncode in {-signal.SIGTERM, -signal.SIGINT, -signal.SIGKILL, 75}:
+                raise PipelineInterrupted(result.get("error", "Worker was interrupted; committed checkpoints are retained"))
+            detail = result.get("error", "No worker result")
             raise RuntimeError(f"{stage} worker exited {process.returncode}: {detail}")
     finally:
         if process.poll() is None:
             os.killpg(process.pid, signal.SIGTERM)
             try:
-                process.wait(timeout=10)
+                process.wait(timeout=90)
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait()
         process.stdout.close()
     result = json.loads(result_path.read_text())
+    if result.get("format") == 1 and result.get("stage") == stage and result.get("status") == "pending":
+        raise StagePending(result.get("detail", "Waiting for remote embeddings"))
     if result.get("format") != 1 or result.get("stage") != stage or result.get("status") != "success" or not isinstance(result.get("stats"), dict):
         raise ValueError("Invalid structured worker result")
     if (implementation(Path(plan["code_root"])) != plan["implementation"]["source"]
@@ -65,7 +72,11 @@ def _worker(plan, stage, cid, config, inputs, output, log_path):
     return result["stats"]
 
 
-def run_stage(reference, stage, inputs, collection_id=None, attempt=1):
+class StagePending(Exception):
+    """A remote stage is waiting; retain its job and let Airflow reschedule."""
+
+
+def run_stage(reference, stage, inputs, collection_id=None, attempt=1, *, worker_env=None):
     plan = load_plan(reference)
     root = Path(plan["root"])
     directory = run_directory(root, plan["dag_id"], plan["run_id"])
@@ -79,7 +90,9 @@ def run_stage(reference, stage, inputs, collection_id=None, attempt=1):
     timing = Tracker(root, stage, collection_id, stage_config(stage, plan["parameters"], plan["resources"]),
                      plan["implementation"]["runtime"], inputs, report, report_path,
                      hint=plan["parameters"].get("eta_stage_seconds", {}).get(stage),
-                     progress_path=log_path.with_suffix(".progress.json"), learn=mode == "build").start()
+                     progress_path=log_path.with_suffix(".progress.json"),
+                     learn=mode == "build" and not (stage == "embed" and
+                         plan["parameters"].get("embed_backend") == "kaggle")).start()
     try:
         if (implementation(root) != plan["implementation"]["source"]
                 or implementation(Path(plan["code_root"])) != plan["implementation"]["source"]
@@ -100,14 +113,23 @@ def run_stage(reference, stage, inputs, collection_id=None, attempt=1):
                 report["status"] = "reused"
             else:
                 result, cached = store.build(stage, collection_id, config, inputs, plan["implementation"],
-                    lambda output: _worker(plan, stage, collection_id, config, inputs, output, log_path),
+                    lambda output: _worker(plan, stage, collection_id, config, inputs, output, log_path,
+                                           **({"environment": worker_env} if worker_env is not None else {})),
                     nonce=plan["run_id"] if stage in {"harvest", "credibility"} else None)
                 report["status"] = "cached" if cached else "success"
             manifest = store.load(result)
             report.update(artifact=result, files=manifest["files"], stats=manifest["stats"])
         return result
+    except StagePending as pending:
+        report.update(status="waiting", detail=str(pending))
+        return None
+    except (PipelineInterrupted, KeyboardInterrupt) as error:
+        report.update(status="interrupted", error=str(error), resumable=True)
+        raise
     except BaseException as error:
-        report.update(status="failed", error=f"{type(error).__name__}: {error}")
+        terminated = type(error).__name__ == "AirflowTaskTerminated" or isinstance(error, SystemExit)
+        report.update(status="interrupted" if terminated else "failed", resumable=terminated,
+                      error=f"{type(error).__name__}: {error}")
         raise
     finally:
         timing.finish(report["status"])

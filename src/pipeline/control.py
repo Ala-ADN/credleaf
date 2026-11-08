@@ -2,9 +2,24 @@
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import signal
+import threading
 import time
 
 from pipeline.artifacts import write_json
+
+
+class PipelineInterrupted(Exception):
+    """The worker stopped at a safe boundary and can be retried."""
+
+
+STOP = threading.Event()
+
+
+def install_shutdown_handlers():
+    # Signal handlers only set a flag. Disk writes happen at the next safe boundary.
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(signum, lambda *_: STOP.set())
 
 
 class RunControl:
@@ -13,12 +28,28 @@ class RunControl:
         self.key, self.progress, self.paused_seconds = key, progress, 0.
 
     def requested(self):
+        state = self.state()
+        return STOP.is_set() or bool(state.get("pause_requested") or state.get("shutdown_requested"))
+
+    def state(self):
         if self.path is None or not self.path.exists():
-            return False
+            return {}
         # A malformed existing request must not accidentally resume a worker.
-        return bool(json.loads(self.path.read_text()).get("pause_requested"))
+        return json.loads(self.path.read_text())
+
+    def interrupted(self, completed=0, total=None, checkpoint=None):
+        if not (STOP.is_set() or self.state().get("shutdown_requested")):
+            return
+        if self.path:
+            write_json(self.path.with_name(self.key + ".json"), dict(status="interrupted", completed=completed,
+                total=total, checkpoint=str(checkpoint) if checkpoint else None,
+                interrupted_at=datetime.now(timezone.utc).isoformat(), safe_boundary="document" if checkpoint else "stage"))
+        if self.progress:
+            self.progress(completed, total, paused=True, force=True)
+        raise PipelineInterrupted("Worker interrupted at a saved boundary; retry resumes committed work")
 
     def wait(self, completed=0, total=None, checkpoint=None):
+        self.interrupted(completed, total, checkpoint)
         if not self.requested():
             return
         started = time.monotonic()
@@ -30,6 +61,7 @@ class RunControl:
             request_id=request_id)
         write_json(ack, state)
         while self.requested():
+            self.interrupted(completed, total, checkpoint)
             current_id = json.loads(self.path.read_text()).get("request_id")
             if current_id != request_id:
                 request_id = current_id

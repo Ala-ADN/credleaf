@@ -30,6 +30,31 @@ def prepare(kind, context):
         tracker.finish(report["status"])
 
 
+def embed(reference, inputs, context):
+    """One task for local computation or resumable remote GPU execution."""
+    frozen = runner.load_plan(reference)
+    params = frozen["parameters"]
+    environment = None
+    if params.get("embed_backend", "local") == "kaggle" and params["embed_mode"] == "build":
+        from airflow.sdk import BaseHook
+        from airflow.exceptions import AirflowNotFoundException
+        from credleaf_kaggle.client import credentials
+        connection_id = params["kaggle_connection_id"]
+        try:
+            connection = BaseHook.get_connection(connection_id)
+        except AirflowNotFoundException:
+            print(f"Waiting for Airflow Connection {connection_id}")
+            return None
+        if not (connection.login or "").strip() or not (connection.password or "").strip():
+            print(f"Waiting for Airflow Connection {connection_id}: Login=username; Password=API token")
+            return None
+        environment = credentials(username=connection.login, password=connection.password,
+                                  auth_type=connection.extra_dejson.get("auth_type", "token"))
+        environment["CREDLEAF_KAGGLE_OWNER"] = connection.login
+    return runner.run_stage(reference, "embed", list(inputs), attempt=context["ti"].try_number,
+                            worker_env=environment)
+
+
 def overview(context):
     dag = context["dag"]
     task_ids = context["task"].upstream_task_ids

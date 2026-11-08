@@ -21,6 +21,8 @@ class CredleafDashboardPlugin(AirflowPlugin):
     name = "credleaf_monitoring"
     fastapi_apps = [dict(app=app, url_prefix="/credleaf", name="Workflow controls")]
     external_views = [
+        dict(name="Progress", href="/credleaf/progress/{DAG_ID}/{RUN_ID}", destination="dag_run",
+             url_route="credleaf-progress"),
         dict(name="Pause / Resume", href="/credleaf/control?dag_id={DAG_ID}&run_id={RUN_ID}", destination="dag_run"),
     ]
     # Keep CredleafEtaLink importable for older serialized runs. New runs use

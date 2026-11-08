@@ -6,6 +6,7 @@ services:
     image: credleaf-airflow:3.1.5
     user: "${AIRFLOW_UID:-50000}:0"
     restart: unless-stopped
+    stop_grace_period: 3m
     environment:
       CREDLEAF_QDRANT_URL: http://qdrant:6333
       CREDLEAF_ARCHIVE_SLOTS: "${CREDLEAF_ARCHIVE_SLOTS:-2}"

@@ -14,7 +14,7 @@ import uuid
 from config import PHASES_BY_NAME
 from pipeline.artifacts import ArtifactStore, file_hash, write_json
 from pipeline.timing import Progress
-from pipeline.control import RunControl
+from pipeline.control import RunControl, PipelineInterrupted, install_shutdown_handlers
 
 
 def execute(request):
@@ -109,6 +109,9 @@ def execute(request):
             raise ValueError(f"NER quality gate failed: {failed}/{emitted} documents failed")
         return stats
     if stage == "embed":
+        if c.get("embed_backend", "local") == "kaggle":
+            from credleaf_kaggle.stage import embed_snapshot as embed_kaggle
+            return embed_kaggle(request)
         return embed_snapshot(request, paths, control=control)
     if stage == "semantic":
         model = store.load(refs[0])["config"]["embed_model"]
@@ -155,48 +158,63 @@ def execute(request):
 
 
 def embed_snapshot(request, paths, *, control=None):
-    """One exclusive collection per attempt; publication references it only after verification."""
+    """One owned checkpoint collection; publication references it only after verification."""
     from qdrant_client import QdrantClient
     from embed import embed_to_qdrant
     from embed.export import export_qdrant_corpus
 
     c, out = request["config"], Path(request["output"])
     name = f"{c['qdrant_prefix']}_{request['artifact_key'][:16]}_{uuid.uuid4().hex[:12]}"
+    checkpoint = None
+    if request.get("checkpoint_dir"):
+        from embed.checkpoint import EmbeddingCheckpoint
+        checkpoint = EmbeddingCheckpoint(request["checkpoint_dir"],
+            dict(artifact_key=request["artifact_key"], config=c),
+            f"{c['qdrant_prefix']}_{request['artifact_key'][:16]}")
+        name = checkpoint.state["collection"]
     combined = out / ".input.jsonl"
-    with combined.open("w", encoding="utf-8") as target:
-        for base, ref in zip(paths, request["inputs"]):
-            with (base / "deduped" / str(ref["collection_id"]) / "documents.jsonl").open(encoding="utf-8") as source:
-                for line in source:
-                    target.write(line)
-    with closing(QdrantClient(url=c["qdrant_url"], timeout=120)) as client:
-        if client.collection_exists(name):
-            raise ValueError("Refusing to modify an existing Qdrant collection")
-        try:
-            count = embed_to_qdrant(combined, c["qdrant_url"], name, embedding_model=c["embed_model"],
-                                    batch_size=c["embed_batch_size"], show_progress=True, id_namespace="credleaf_snapshot_v1",
-                                    control=control)
-            if count < 1 or client.count(collection_name=name, exact=True).count != count:
-                raise ValueError("Embedding count validation failed")
-            if control and control.progress:
-                control.progress.unit = "chunks exported"
-            exported = export_qdrant_corpus(client, name, out / "input", expected_count=count,
-                                            batch_size=c["embed_batch_size"], control=control)
-            stats = dict(collection=name, qdrant_url=c["qdrant_url"], **exported,
-                         embedding_model=c["embed_model"], point_id_namespace="credleaf_snapshot_v1",
-                         torch=version("torch"), chonkie=version("chonkie"))
-            write_json(out / "qdrant.json", stats)
-        except BaseException:
-            # Only this attempt's new collection can be deleted. A hard worker
-            # crash may leave an unreferenced orphan, never a published target.
+    try:
+        total_documents = 0
+        with combined.open("w", encoding="utf-8") as target:
+            for base, ref in zip(paths, request["inputs"]):
+                with (base / "deduped" / str(ref["collection_id"]) / "documents.jsonl").open(encoding="utf-8") as source:
+                    for line in source:
+                        target.write(line)
+                        total_documents += bool(line.strip())
+        with closing(QdrantClient(url=c["qdrant_url"], timeout=120)) as client:
+            if client.collection_exists(name) and checkpoint is None:
+                raise ValueError("Refusing to modify an existing Qdrant collection")
+            if checkpoint and not client.collection_exists(name) and checkpoint.state["chunks"]:
+                raise ValueError("Checkpoint collection is missing; restore Qdrant's persistent data before resuming")
             try:
-                if client.collection_exists(name):
-                    client.delete_collection(name)
-            except Exception:
-                logging.exception("Could not remove unpublished collection %s", name)
-            raise
-        finally:
-            combined.unlink(missing_ok=True)
-    return stats
+                count = embed_to_qdrant(combined, c["qdrant_url"], name, embedding_model=c["embed_model"],
+                                        batch_size=c["embed_batch_size"], show_progress=True, id_namespace="credleaf_snapshot_v1",
+                                        control=control, **(dict(checkpoint=checkpoint, total_documents=total_documents) if checkpoint else {}))
+                if count < 1 or client.count(collection_name=name, exact=True).count != count:
+                    raise ValueError("Embedding count validation failed")
+                if control and control.progress:
+                    control.progress.unit = "chunks exported"
+                exported = export_qdrant_corpus(client, name, out / "input", expected_count=count,
+                                                batch_size=c["embed_batch_size"], control=control)
+                stats = dict(collection=name, qdrant_url=c["qdrant_url"], **exported,
+                             embedding_model=c["embed_model"], point_id_namespace="credleaf_snapshot_v1",
+                             torch=version("torch"), chonkie=version("chonkie"))
+                write_json(out / "qdrant.json", stats)
+            except BaseException:
+                # Checkpoint collections remain private and resume on retry. Only
+                # uncheckpointed attempts discard their newly created collection.
+                if checkpoint is None:
+                    try:
+                        if client.collection_exists(name):
+                            client.delete_collection(name)
+                    except Exception:
+                        logging.exception("Could not remove unpublished collection %s", name)
+                raise
+        return stats
+    finally:
+        combined.unlink(missing_ok=True)
+        if checkpoint:
+            checkpoint.close()
 
 
 def main():
@@ -205,10 +223,17 @@ def main():
     parser.add_argument("--result", required=True, type=Path)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
+    install_shutdown_handlers()
     request = json.loads(args.request.read_text())
+    from pipeline.runner import StagePending
     try:
         stats = execute(request)
         write_json(args.result, dict(format=1, stage=request["stage"], status="success", stats=stats))
+    except StagePending as pending:
+        write_json(args.result, dict(format=1, stage=request["stage"], status="pending", detail=str(pending)))
+    except (PipelineInterrupted, KeyboardInterrupt) as error:
+        write_json(args.result, dict(format=1, stage=request["stage"], status="interrupted", error=str(error)))
+        raise SystemExit(75)
     except BaseException as error:
         write_json(args.result, dict(format=1, stage=request["stage"], status="failed", error=str(error)))
         raise

@@ -28,12 +28,12 @@ def task_id(stage, kind):
     return stage
 
 
-def collect(root, states=None, now=None):
+def collect(root, states=None, now=None, *, plan_paths=None):
     root = Path(root)
     now = now or datetime.now(timezone.utc)
     states = states or {}
     runs = []
-    for plan_path in (root / "data/pipeline/runs").glob("*/plan.json"):
+    for plan_path in (plan_paths if plan_paths is not None else (root / "data/pipeline/runs").glob("*/plan.json")):
         plan = read_json(plan_path)
         if not plan:
             continue
@@ -55,6 +55,14 @@ def collect(root, states=None, now=None):
                     live = read_json(directory / (Path(report["log"]).stem + ".progress.json"), {})
                     if live:
                         progress = live
+                if stage == "embed" and p.get("embed_backend") == "kaggle" and report.get("log"):
+                    request = read_json(directory / (Path(report["log"]).stem + ".request.json"), {})
+                    if request.get("checkpoint_dir"):
+                        job = read_json(Path(request["checkpoint_dir"]) / "kaggle/state.json", {})
+                        if job.get("shards"):
+                            progress = dict(completed=sum(s["status"] == "downloaded" for s in job["shards"]),
+                                            total=len(job["shards"]), unit="shards downloaded",
+                                            updated_at=job.get("updated_at"))
                 mapped = p.get("collection_ids", []).index(cid) if cid is not None else -1
                 ti = db.get("tasks", {}).get((task_id(stage, plan["kind"]), mapped), {})
                 actual_state = ti.get("state")

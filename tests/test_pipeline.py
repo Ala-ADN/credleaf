@@ -77,6 +77,7 @@ def test_schema_defaults(kind):
     dict(collection_ids=[]), dict(collection_ids=[1]), dict(collection_ids=[13559,13559]),
     dict(harvest_mode="off"), dict(dedupe_threshold=0), dict(harvest_max_seed_error_fraction=1.1),
     dict(harvest_timeout=0), dict(embed_batch_size=0), dict(georef_device="tpu"),
+    dict(embed_backend="other"), dict(kaggle_shard_documents=0), dict(kaggle_kernel_timeout=43201),
     dict(base_snapshot_id="../../other"), dict(qdrant_url="file:///tmp/x"), dict(unknown=True),
 ])
 def test_invalid_configuration(changes):
