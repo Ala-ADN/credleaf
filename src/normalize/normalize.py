@@ -146,7 +146,7 @@ def normalize_phase(
     """Read a harvest JSONL, fetch+extract each capture, write normalized JSONL."""
     records = list(load_jsonl(captures_jsonl))
     total = min(len(records), max_docs) if max_docs is not None else len(records)
-    if progress:
+    if progress and (checkpoint_dir is None or not records):
         progress(0, total)
     if not records:
         log.warning(ValueError(f"no records in {captures_jsonl}"))

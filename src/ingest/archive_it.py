@@ -9,6 +9,7 @@ Endpoints used:
 from __future__ import annotations
 
 import logging
+import hashlib
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -18,7 +19,7 @@ from typing import Any
 import httpx
 
 from .models import Capture, Collection, Seed
-from .pacing import ArchivePacing, ArchiveUnavailable
+from .pacing import ArchivePacing, ArchiveUnavailable, CaptureFetchFailed, MALFORMED_RESPONSE_LIMIT
 
 log = logging.getLogger(__name__)
 
@@ -211,6 +212,10 @@ class ArchiveItClient:
         Honors the Retry-After header when present.
         """
         snap = f"{WAYBACK_BASE}/{collection_id}/{timestamp}id_/{url}"
+        capture_key = hashlib.sha256(snap.encode()).hexdigest()
+        failure = self._pacing.capture_failure(capture_key) if self._pacing else dict(attempts=0)
+        if failure['attempts'] >= MALFORMED_RESPONSE_LIMIT:
+            raise CaptureFetchFailed(f"Capture download failed after {failure['attempts']} malformed responses: {snap}: {failure.get('error')}")
         for attempt in range(max_retries + 1):
             if self._pacing:
                 self._interval = self._pacing.acquire()
@@ -221,8 +226,15 @@ class ArchiveItClient:
             try:
                 r = self._client.get(snap)
             except httpx.TransportError as exc:
+                # A reproducibly malformed body is specific to this capture.
+                # Do not turn it into an unlimited, archive-wide outage loop.
+                if isinstance(exc, httpx.RemoteProtocolError):
+                    failure = (self._pacing.capture_failure(capture_key, exc) if self._pacing
+                               else dict(attempts=failure['attempts'] + 1))
+                    if failure['attempts'] >= MALFORMED_RESPONSE_LIMIT:
+                        raise CaptureFetchFailed(f"Capture download failed after {failure['attempts']} malformed responses: {snap}: {exc}") from exc
                 if attempt == max_retries:
-                    if self._pacing:
+                    if self._pacing and not isinstance(exc, httpx.RemoteProtocolError):
                         self._pacing.result(transient=True)
                     raise ArchiveUnavailable(f"Archive network unavailable; resume this capture after recovery: {exc}") from exc
                 self._next_request = max(self._next_request, time.monotonic() + backoff_base ** (attempt + 1))
@@ -245,6 +257,8 @@ class ArchiveItClient:
                 self._next_request = max(self._next_request, time.monotonic() + delay)
                 continue
             r.raise_for_status()
+            if self._pacing:
+                self._pacing.capture_succeeded(capture_key)
             self._successes += 1
             if self._pacing:
                 self._interval = self._pacing.result()

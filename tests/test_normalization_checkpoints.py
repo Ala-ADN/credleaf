@@ -161,3 +161,17 @@ def test_verified_legacy_prefix_is_adopted_without_reprocessing(setup, tmp_path,
     assert stats.total == 5 and stats.adopted == 2 and stats.extracted == 5
     rows = [json.loads(x) for x in options["output_path"].read_text().splitlines()]
     assert rows[0]["text"] == rows[1]["text"] == "preserved legacy text"
+
+
+def test_resumed_progress_keeps_committed_count_during_outage(setup,monkeypatch,tmp_path):
+    from ingest.archive_it import ArchiveUnavailable
+    from pipeline.timing import Progress
+    module,source,records,calls,process,options=setup
+    def interrupt(client,record,cache,use_cache,stats):
+        if record.seed_id==2:raise ArchiveUnavailable('archive cooldown')
+        return process(client,record,cache,use_cache,stats)
+    monkeypatch.setattr(module,'_process',interrupt)
+    with pytest.raises(ArchiveUnavailable):module.normalize_phase(None,source,**options)
+    path=tmp_path/'progress.json'
+    with pytest.raises(ArchiveUnavailable):module.normalize_phase(None,source,progress=Progress(path),**options)
+    assert json.loads(path.read_text())['completed']==2

@@ -14,6 +14,13 @@ class ArchiveUnavailable(httpx.TransportError):
     """Transient archive interruption: keep the current capture uncommitted."""
 
 
+class CaptureFetchFailed(httpx.HTTPError):
+    """A single capture repeatedly returned a malformed response."""
+
+
+MALFORMED_RESPONSE_LIMIT = 3
+
+
 class ArchivePacing:
     def __init__(self, path, minimum_interval=2.):
         self.path = Path(path)
@@ -42,6 +49,20 @@ class ArchivePacing:
                     return value['interval']
             # Short waits keep normal service shutdown within its grace period.
             time.sleep(min(wait, 1.))
+
+    def capture_failure(self, key, error=None):
+        """Count malformed responses per capture across processes and restarts."""
+        with self.state() as value:
+            failures = value.setdefault('capture_failures', {})
+            failure = failures.get(key, dict(attempts=0))
+            if error is not None:
+                failure = dict(attempts=failure['attempts'] + 1, error=str(error), updated_at=time.time())
+                failures[key] = failure
+            return dict(failure)
+
+    def capture_succeeded(self, key):
+        with self.state() as value:
+            value.setdefault('capture_failures', {}).pop(key, None)
 
     def result(self, *, transient=False, retry_after=0.):
         with self.state() as value:

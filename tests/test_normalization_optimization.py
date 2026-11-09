@@ -164,3 +164,58 @@ def test_worker_reports_outage_as_pending_not_failure(tmp_path, monkeypatch):
     monkeypatch.setattr(worker,'execute',unavailable)
     worker.main()
     assert json.loads(result.read_text())==dict(format=1,stage='normalize',status='pending',detail='cooldown')
+
+
+def test_broken_capture_is_committed_as_failed_and_next_capture_continues(tmp_path,monkeypatch):
+    module=importlib.import_module('normalize.normalize')
+    now=clock(monkeypatch)
+    monkeypatch.setattr('ingest.pacing.time.time',lambda:now[0])
+    calls=[]
+    def respond(req):
+        calls.append(str(req.url))
+        if str(req.url).endswith('/broken'):
+            raise httpx.RemoteProtocolError('incomplete message body',request=req)
+        return httpx.Response(200,content=b'valid html')
+    monkeypatch.setattr(module,'extract',lambda html,url:Extracted(text='valid document'))
+    rows=[CaptureRecord(collection_id=13559,seed_id=1,seed_url='https://example.org/',
+        phase='P1_global_onset',capture=Capture(urlkey='x',timestamp='20200301000000',url='https://example.org/'+name))
+        for name in ('broken','good')]
+    source=tmp_path/'captures.jsonl';source.write_text(''.join(r.model_dump_json()+'\n' for r in rows))
+    with ArchiveItClient(pacing_path=tmp_path/'pacing.json') as client:
+        client._client.close();client._client=httpx.Client(transport=httpx.MockTransport(respond))
+        output,stats=module.normalize_phase(client,source,output_path=tmp_path/'docs.jsonl',
+            checkpoint_dir=tmp_path/'checkpoint',checkpoint_identity={'test':1})
+    docs=[json.loads(l) for l in output.read_text().splitlines()]
+    assert [d['fetch_status'] for d in docs]==['fetch_failed','ok']
+    assert len(calls)==4 and stats.total==2 and stats.fetch_failed==1 and stats.extracted==1
+    assert '3 malformed responses' in docs[0]['error']
+    assert json.loads((tmp_path/'pacing.json').read_text())['blocked_until']==0
+
+
+def test_capture_retry_limit_survives_worker_restart(tmp_path,monkeypatch):
+    from ingest.pacing import CaptureFetchFailed
+    now=clock(monkeypatch)
+    monkeypatch.setattr('ingest.pacing.time.time',lambda:now[0])
+    calls=[]
+    def respond(req):
+        calls.append(req)
+        raise httpx.RemoteProtocolError('truncated response',request=req)
+    for error in (ArchiveUnavailable,ArchiveUnavailable,CaptureFetchFailed,CaptureFetchFailed):
+        with ArchiveItClient(pacing_path=tmp_path/'pacing.json') as client:
+            client._client.close();client._client=httpx.Client(transport=httpx.MockTransport(respond))
+            with pytest.raises(error):client.fetch_capture(1,'20200301000000','https://example.org/broken',max_retries=0)
+    assert len(calls)==3
+
+
+def test_recovered_capture_clears_malformed_response_count(tmp_path,monkeypatch):
+    now=clock(monkeypatch)
+    monkeypatch.setattr('ingest.pacing.time.time',lambda:now[0])
+    calls=[]
+    def respond(req):
+        calls.append(req)
+        if len(calls)==1:raise httpx.RemoteProtocolError('truncated response',request=req)
+        return httpx.Response(200,content=b'complete')
+    with ArchiveItClient(pacing_path=tmp_path/'pacing.json') as client:
+        client._client.close();client._client=httpx.Client(transport=httpx.MockTransport(respond))
+        assert client.fetch_capture(1,'20200301000000','https://example.org/')==b'complete'
+    assert json.loads((tmp_path/'pacing.json').read_text())['capture_failures']=={}
